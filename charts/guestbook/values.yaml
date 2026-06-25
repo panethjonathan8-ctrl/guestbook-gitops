@@ -1,0 +1,81 @@
+# Base defaults — every environment inherits these.
+# Per-environment files (values-dev.yaml, etc.) only override what differs.
+
+replicaCount: 1
+
+image:
+  # Set per environment to the full ECR URL:
+  # <account>.dkr.ecr.<region>.amazonaws.com/guestbook
+  repository: ""
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  # Annotated with the IRSA role ARN by the per-environment values file.
+  # This is how the pod authenticates to AWS without hardcoded credentials.
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+ingress:
+  enabled: true
+  # NGINX Ingress Controller handles in-cluster routing.
+  # AWS LBC creates one ALB per cluster pointing to NGINX.
+  className: nginx
+  annotations: {}
+  host: ""
+  tls: []
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+persistence:
+  enabled: true
+  # gp2 = EBS General Purpose SSD. Kubernetes provisions the disk automatically.
+  storageClass: gp2
+  size: 1Gi
+  mountPath: /data
+
+# Non-secret environment config — stored in a ConfigMap, not a Secret.
+# ENV_COLOR controls the banner colour visible in the demo.
+env:
+  ENV_NAME: local
+  ENV_COLOR: "#607D8B"
+
+externalSecret:
+  enabled: true
+  # How often ESO re-syncs the secret from AWS Secrets Manager.
+  refreshInterval: 1h
+  # ClusterSecretStore is installed by the addons Terragrunt module.
+  secretStoreName: aws-secrets-manager
+  secretStoreKind: ClusterSecretStore
+  # Path in AWS Secrets Manager — overridden per environment.
+  remoteSecretName: ""
+  # Name of the Kubernetes Secret ESO creates in this namespace.
+  targetSecretName: guestbook-db-secret
+
+# Caps the total resources this namespace can consume.
+# Prevents a broken dev deploy from starving staging on the same cluster.
+resourceQuota:
+  enabled: true
+  hard:
+    requests.cpu: "500m"
+    requests.memory: "256Mi"
+    limits.cpu: "1"
+    limits.memory: "512Mi"
+    pods: "5"

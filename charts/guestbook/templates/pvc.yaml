@@ -1,0 +1,18 @@
+{{- if .Values.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "guestbook.fullname" . }}-data
+  labels:
+    {{- include "guestbook.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    # ReadWriteOnce = one node can mount this volume at a time.
+    # Correct for EBS — EBS volumes are attached to a single EC2 node.
+    # (ReadWriteMany would require EFS, which is more expensive.)
+    - ReadWriteOnce
+  storageClassName: {{ .Values.persistence.storageClass }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.size }}
+{{- end }}

@@ -1,0 +1,31 @@
+replicaCount: 2
+
+image:
+  repository: "ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/guestbook"
+  tag: "latest"
+
+env:
+  ENV_NAME: staging
+  ENV_COLOR: "#FFC107"   # yellow
+
+ingress:
+  host: staging.guestbook.example.com
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+externalSecret:
+  remoteSecretName: guestbook/staging/db-secret
+
+resourceQuota:
+  hard:
+    requests.cpu: "1"
+    requests.memory: "512Mi"
+    limits.cpu: "2"
+    limits.memory: "1Gi"
+    pods: "10"

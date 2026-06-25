@@ -1,0 +1,116 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "guestbook.fullname" . }}
+  labels:
+    {{- include "guestbook.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "guestbook.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "guestbook.selectorLabels" . | nindent 8 }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "guestbook.serviceAccountName" . }}
+
+      # Pod-level security: no container in this pod may run as root.
+      securityContext:
+        runAsNonRoot: true
+        # fsGroup makes the mounted PVC writable by this group ID.
+        # The Dockerfile creates appuser with GID 1001.
+        fsGroup: 1001
+
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+          # Container-level security hardening.
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+
+          env:
+            # Non-secret config — read from ConfigMap, not hardcoded here.
+            # Keeps this Deployment template environment-agnostic.
+            - name: ENV_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "guestbook.fullname" . }}-config
+                  key: ENV_NAME
+            - name: ENV_COLOR
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "guestbook.fullname" . }}-config
+                  key: ENV_COLOR
+
+            # Image tag baked in — shows as the version number in the UI.
+            # Updates automatically when ArgoCD syncs a new image tag.
+            - name: VERSION
+              value: {{ .Values.image.tag | quote }}
+
+            # Injected by Kubernetes at runtime via the downward API.
+            # Refreshing the page shows different pod names — proves ALB
+            # is load-balancing across replicas.
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+
+            # Mount path for the SQLite database file on the PVC.
+            - name: DB_PATH
+              value: {{ .Values.persistence.mountPath }}/guestbook.db
+
+            # Synced from AWS Secrets Manager by the External Secrets Operator.
+            # Presence = "db: connected". Absence = "db: disconnected".
+            # Visual proof that ESO is working during the demo.
+            - name: DB_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.externalSecret.targetSecretName }}
+                  key: password
+
+          # Liveness probe: Kubernetes restarts the pod if this fails.
+          # Uses the /health endpoint we defined in main.py.
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            failureThreshold: 3
+
+          # Readiness probe: Kubernetes stops sending traffic to the pod
+          # until this passes. Prevents requests hitting a pod that is
+          # still starting up.
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+
+          volumeMounts:
+            - name: data
+              mountPath: {{ .Values.persistence.mountPath }}
+
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "guestbook.fullname" . }}-data
