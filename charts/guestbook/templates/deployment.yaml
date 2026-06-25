@@ -23,8 +23,11 @@ spec:
       # Pod-level security: no container in this pod may run as root.
       securityContext:
         runAsNonRoot: true
-        # fsGroup makes the mounted PVC writable by this group ID.
-        # The Dockerfile creates appuser with GID 1001.
+        # Explicit UID/GID matches the Dockerfile (adduser --uid 1001 --gid 1001).
+        # Kubernetes requires a numeric UID to enforce runAsNonRoot — a named
+        # user like 'appuser' cannot be verified at admission time.
+        runAsUser: 1001
+        # fsGroup makes the mounted PVC writable by GID 1001 (appgroup).
         fsGroup: 1001
 
       containers:
@@ -36,6 +39,7 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false
             runAsNonRoot: true
+            runAsUser: 1001
 
           ports:
             - name: http
