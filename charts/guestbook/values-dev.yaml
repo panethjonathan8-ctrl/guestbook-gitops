@@ -1,0 +1,33 @@
+replicaCount: 1
+
+image:
+  # ECR URL set after Terragrunt provisions the repository.
+  # CI updates this tag on every successful build.
+  repository: "ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/guestbook"
+  tag: "latest"
+
+env:
+  ENV_NAME: dev
+  ENV_COLOR: "#4CAF50"   # green
+
+ingress:
+  host: dev.guestbook.example.com
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+
+externalSecret:
+  remoteSecretName: guestbook/dev/db-secret
+
+resourceQuota:
+  hard:
+    requests.cpu: "500m"
+    requests.memory: "256Mi"
+    limits.cpu: "1"
+    limits.memory: "512Mi"
+    pods: "5"

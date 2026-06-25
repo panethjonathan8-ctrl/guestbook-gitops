@@ -1,0 +1,8 @@
+apiVersion: v2
+name: guestbook
+description: >
+  A generic, reusable Helm chart for the guestbook web application.
+  Designed to deploy to multiple environments via per-environment values files.
+type: application
+version: 0.1.0
+appVersion: "latest"
