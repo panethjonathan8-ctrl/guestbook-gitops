@@ -40,6 +40,10 @@ inputs = {
   # Etcd encryption is optional — disable it for this demo cluster.
   create_kms_key = false
 
+  # Disable control plane logging — not needed for a demo cluster and avoids
+  # requiring CloudWatch permissions in the scoped IAM policy.
+  enabled_log_types = []
+
   addons = {
     coredns            = { most_recent = true }
     kube-proxy         = { most_recent = true }
