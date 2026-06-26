@@ -36,13 +36,17 @@ inputs = {
     }
   }
 
-  # KMS key creation requires kms:* permissions not in the scoped IAM policy.
-  # Etcd encryption is optional — disable it for this demo cluster.
-  create_kms_key = false
+  # Disable KMS etcd encryption — optional for a demo cluster and requires
+  # kms:* permissions not in the scoped IAM policy. Setting encryption_config
+  # to null skips the block entirely (default {} still enables it).
+  create_kms_key    = false
+  encryption_config = null
 
   # Disable control plane logging — not needed for a demo cluster and avoids
-  # requiring CloudWatch permissions in the scoped IAM policy.
-  enabled_log_types = []
+  # requiring CloudWatch permissions. Controlled by create_cloudwatch_log_group,
+  # not enabled_log_types (which only selects which log types to ship).
+  create_cloudwatch_log_group = false
+  enabled_log_types           = []
 
   addons = {
     coredns            = { most_recent = true }
