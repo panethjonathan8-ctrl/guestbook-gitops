@@ -1,0 +1,25 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      # Helm templates use {{ }} which breaks the YAML parser — exclude them.
+      - id: check-yaml
+        exclude: charts/guestbook/templates/
+      - id: check-merge-conflict
+      - id: detect-private-key
+
+  - repo: local
+    hooks:
+      - id: no-aws-secrets
+        name: no-aws-secrets
+        language: pygrep
+        entry: '(AKIA[0-9A-Z]{16}|aws_secret_access_key\s*=\s*[A-Za-z0-9/+]{40}|-----BEGIN .* PRIVATE KEY-----)'
+        types: [text]
+
+  # Formats all .tf and .hcl files — catches style issues before terragrunt plan.
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.107.0
+    hooks:
+      - id: terraform_fmt

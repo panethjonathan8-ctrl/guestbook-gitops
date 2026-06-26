@@ -3,7 +3,7 @@ replicaCount: 1
 image:
   # ECR URL set after Terragrunt provisions the repository.
   # CI updates this tag on every successful build.
-  repository: "ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/guestbook"
+  repository: "400013494612.dkr.ecr.eu-west-1.amazonaws.com/guestbook"
   tag: "latest"
 
 env:
