@@ -49,10 +49,9 @@ inputs = {
   enabled_log_types           = []
 
   addons = {
-    coredns            = { most_recent = true }
-    kube-proxy         = { most_recent = true }
-    vpc-cni            = { most_recent = true }
-    aws-ebs-csi-driver = { most_recent = true }
+    coredns    = { most_recent = true }
+    kube-proxy = { most_recent = true, before_compute = true }
+    vpc-cni    = { most_recent = true, before_compute = true }
   }
 
   # Grant the guestbook-dev IAM user cluster-admin via EKS access entries.
