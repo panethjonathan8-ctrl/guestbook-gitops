@@ -1,5 +1,6 @@
 # Terraform — NEVER commit these
 **/.terraform/
+**/.terragrunt-cache/
 *.tfstate
 *.tfstate.backup
 
