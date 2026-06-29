@@ -21,9 +21,9 @@ inputs = {
   # Nodes are already in public subnets so there is no private endpoint needed.
   cluster_endpoint_public_access = true
 
-  # Automatically grants the IAM identity running terraform cluster-admin access.
-  # Without this, even the creator cannot run kubectl after apply.
-  enable_cluster_creator_admin_permissions = true
+  # Disabled — explicit access_entries block below grants guestbook-dev cluster-admin.
+  # Enabling this alongside access_entries for the same principal causes a 409 conflict.
+  enable_cluster_creator_admin_permissions = false
 
   eks_managed_node_groups = {
     default = {

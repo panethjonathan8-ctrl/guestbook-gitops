@@ -116,5 +116,9 @@ spec:
 
       volumes:
         - name: data
+          {{- if .Values.persistence.enabled }}
           persistentVolumeClaim:
             claimName: {{ include "guestbook.fullname" . }}-data
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
