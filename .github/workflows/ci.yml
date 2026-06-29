@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ── Helm ────────────────────────────────────────────────────────────────────
+
+  helm-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      # Lint every chart against every environment values file.
+      # helm lint catches bad YAML, missing required values, and chart metadata errors.
+      - name: Lint guestbook chart
+        run: |
+          helm lint charts/guestbook -f charts/guestbook/values.yaml
+          helm lint charts/guestbook -f charts/guestbook/values.yaml -f charts/guestbook/values-dev.yaml
+          helm lint charts/guestbook -f charts/guestbook/values.yaml -f charts/guestbook/values-staging.yaml
+          helm lint charts/guestbook -f charts/guestbook/values.yaml -f charts/guestbook/values-prod.yaml
+
+      - name: Lint argocd-apps chart
+        run: |
+          helm lint charts/argocd-apps -f charts/argocd-apps/values-dev.yaml
+          helm lint charts/argocd-apps -f charts/argocd-apps/values-prod.yaml
+
+  helm-template:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      # helm template fully renders the chart — catches errors that lint misses,
+      # such as referencing a value key that does not exist in the values file.
+      - name: Template guestbook chart (dev)
+        run: helm template guestbook charts/guestbook -f charts/guestbook/values.yaml -f charts/guestbook/values-dev.yaml
+
+      - name: Template guestbook chart (staging)
+        run: helm template guestbook charts/guestbook -f charts/guestbook/values.yaml -f charts/guestbook/values-staging.yaml
+
+      - name: Template guestbook chart (prod)
+        run: helm template guestbook charts/guestbook -f charts/guestbook/values.yaml -f charts/guestbook/values-prod.yaml
+
+      - name: Template argocd-apps chart (dev)
+        run: helm template argocd-apps charts/argocd-apps -f charts/argocd-apps/values-dev.yaml
+
+      - name: Template argocd-apps chart (prod)
+        run: helm template argocd-apps charts/argocd-apps -f charts/argocd-apps/values-prod.yaml
+
+  # ── Terraform ───────────────────────────────────────────────────────────────
+
+  tf-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      # Validate the local modules we write ourselves.
+      # -backend=false skips the S3 state backend so no AWS credentials are needed.
+      # Remote modules (tfr://) are not validated here — they are well-tested
+      # public modules maintained by the community.
+      - name: Validate github-oidc module
+        run: |
+          cd infrastructure/modules/github-oidc
+          terraform init -backend=false
+          terraform validate
+
+      - name: Validate argocd module
+        run: |
+          cd infrastructure/modules/argocd
+          terraform init -backend=false
+          terraform validate
+
+  tflint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install tflint
+        uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: v0.55.0
+
+      # tflint checks for AWS-specific best practices, deprecated arguments,
+      # and common misconfigurations. The .tflint.hcl at the repo root
+      # tells it to load the AWS ruleset plugin.
+      - name: Init tflint (downloads AWS plugin)
+        run: tflint --init
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Lint github-oidc module
+        run: tflint --chdir=infrastructure/modules/github-oidc
+
+      - name: Lint argocd module
+        run: tflint --chdir=infrastructure/modules/argocd
