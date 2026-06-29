@@ -1,8 +1,8 @@
 replicaCount: 2
 
 image:
-  repository: "ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/guestbook"
-  tag: "latest"
+  repository: "400013494612.dkr.ecr.eu-west-1.amazonaws.com/guestbook"
+  tag: "615bd89"
 
 env:
   ENV_NAME: staging
