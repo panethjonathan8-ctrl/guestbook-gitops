@@ -10,23 +10,23 @@ locals {
 }
 
 terraform {
-  source = "tfr:///terraform-aws-modules/eks/aws?version=20.33.1"
+  source = "tfr:///terraform-aws-modules/eks/aws?version=21.24.0"
 }
 
 inputs = {
-  cluster_name    = local.cluster_name
-  cluster_version = "1.36"
+  name               = local.cluster_name
+  kubernetes_version = "1.36"
 
   # Public endpoint so kubectl works from a laptop.
   # Nodes are already in public subnets so there is no private endpoint needed.
-  cluster_endpoint_public_access = true
+  endpoint_public_access = true
 
   # Disabled — explicit access_entries block below grants guestbook-dev cluster-admin.
   # Enabling this alongside access_entries for the same principal causes a 409 conflict.
   enable_cluster_creator_admin_permissions = false
 
   eks_managed_node_groups = {
-    default = {
+    guestbook = {
       instance_types = ["t3.medium"]
       min_size       = 1
       max_size       = 1
@@ -34,7 +34,7 @@ inputs = {
     }
   }
 
-  cluster_addons = {
+  addons = {
     coredns            = { most_recent = true }
     kube-proxy         = { most_recent = true }
     vpc-cni            = { most_recent = true }
