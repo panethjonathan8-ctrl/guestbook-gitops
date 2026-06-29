@@ -1,0 +1,12 @@
+gitopsRepoUrl: https://github.com/panethjonathan8-ctrl/guestbook-gitops.git
+gitopsRepoBranch: main
+
+# One entry per namespace this cluster manages.
+# The dev cluster hosts both dev and staging — two namespaces, one cluster.
+applications:
+  - name: guestbook-dev
+    env: dev
+    namespace: dev
+  - name: guestbook-staging
+    env: staging
+    namespace: staging

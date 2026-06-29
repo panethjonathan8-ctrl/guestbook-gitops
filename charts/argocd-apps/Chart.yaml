@@ -1,0 +1,4 @@
+apiVersion: v2
+name: argocd-apps
+version: 0.1.0
+description: App-of-Apps — one ArgoCD Application per environment namespace.

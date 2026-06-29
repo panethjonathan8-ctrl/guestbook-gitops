@@ -1,0 +1,8 @@
+gitopsRepoUrl: https://github.com/panethjonathan8-ctrl/guestbook-gitops.git
+gitopsRepoBranch: main
+
+# The prod cluster is single-purpose — only the prod namespace runs here.
+applications:
+  - name: guestbook-prod
+    env: prod
+    namespace: prod
