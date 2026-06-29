@@ -1,0 +1,32 @@
+{{- range .Values.applications }}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: {{ .name }}
+  namespace: argocd
+  finalizers:
+    # Tells ArgoCD to delete all resources it deployed when this Application
+    # is deleted. The Terraform destroy provisioner strips this finalizer
+    # before uninstalling ArgoCD so the deletion does not hang.
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: {{ $.Values.gitopsRepoUrl }}
+    targetRevision: {{ $.Values.gitopsRepoBranch | default "main" }}
+    path: charts/guestbook
+    helm:
+      valueFiles:
+        - values.yaml
+        - values-{{ .env }}.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: {{ .namespace }}
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+{{- end }}
