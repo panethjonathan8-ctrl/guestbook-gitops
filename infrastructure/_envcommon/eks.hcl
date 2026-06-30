@@ -49,7 +49,11 @@ inputs = {
   addons = {
     coredns            = { most_recent = true }
     kube-proxy         = { most_recent = true }
-    vpc-cni            = { most_recent = true }
+    # before_compute = true places vpc-cni in a separate resource that has NO
+    # depends_on on node groups. Without this, nodes try to join before the CNI
+    # DaemonSet is running, kubelet reports "cni plugin not initialized", and the
+    # node group fails with CREATE_FAILED after 33 minutes.
+    vpc-cni            = { most_recent = true, before_compute = true }
     aws-ebs-csi-driver = { most_recent = true }
   }
 
