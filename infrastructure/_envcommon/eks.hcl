@@ -54,7 +54,6 @@ inputs = {
     # DaemonSet is running, kubelet reports "cni plugin not initialized", and the
     # node group fails with CREATE_FAILED after 33 minutes.
     vpc-cni            = { most_recent = true, before_compute = true }
-    aws-ebs-csi-driver = { most_recent = true }
   }
 
   # Grant the guestbook-dev IAM user cluster-admin via EKS access entries.
