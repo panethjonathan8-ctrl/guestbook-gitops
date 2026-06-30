@@ -73,16 +73,15 @@ spec:
                 fieldRef:
                   fieldPath: metadata.name
 
-            # Mount path for the SQLite database file on the PVC.
-            - name: DB_PATH
-              value: {{ .Values.persistence.mountPath }}/guestbook.db
-
             {{- if .Values.externalSecret.enabled }}
-            - name: DB_SECRET
+            # Full PostgreSQL connection string synced from AWS Secrets Manager
+            # by the External Secrets Operator. ESO creates the Kubernetes Secret
+            # named by targetSecretName; this env var reads the DATABASE_URL key.
+            - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.externalSecret.targetSecretName }}
-                  key: password
+                  key: DATABASE_URL
             {{- end }}
 
           # Liveness probe: Kubernetes restarts the pod if this fails.
@@ -109,15 +108,15 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
 
+          {{- if .Values.persistence.enabled }}
           volumeMounts:
             - name: data
               mountPath: {{ .Values.persistence.mountPath }}
+          {{- end }}
 
+      {{- if .Values.persistence.enabled }}
       volumes:
         - name: data
-          {{- if .Values.persistence.enabled }}
           persistentVolumeClaim:
             claimName: {{ include "guestbook.fullname" . }}-data
-          {{- else }}
-          emptyDir: {}
-          {{- end }}
+      {{- end }}

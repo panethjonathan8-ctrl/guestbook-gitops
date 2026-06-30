@@ -1,8 +1,8 @@
 replicaCount: 3
 
 image:
-  repository: "ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/guestbook"
-  tag: "latest"
+  repository: "400013494612.dkr.ecr.eu-west-1.amazonaws.com/guestbook"
+  tag: "2bed281"
 
 env:
   ENV_NAME: production
@@ -22,7 +22,11 @@ resources:
     cpu: 1000m
     memory: 512Mi
 
+persistence:
+  enabled: false
+
 externalSecret:
+  enabled: true
   remoteSecretName: guestbook/prod/db-secret
 
 resourceQuota:

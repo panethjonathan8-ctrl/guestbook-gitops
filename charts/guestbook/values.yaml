@@ -45,8 +45,9 @@ resources:
     memory: 256Mi
 
 persistence:
-  enabled: true
-  # gp2 = EBS General Purpose SSD. Kubernetes provisions the disk automatically.
+  # Disabled — the app uses RDS PostgreSQL, not a local SQLite file.
+  # Set to true only if reverting to file-based storage (requires EBS CSI driver).
+  enabled: false
   storageClass: gp2
   size: 1Gi
   mountPath: /data
