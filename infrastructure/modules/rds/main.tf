@@ -157,3 +157,44 @@ resource "aws_secretsmanager_secret_version" "db" {
     dbname   = var.db_name
   })
 }
+
+# ---------------------------------------------------------------------------
+# Extra secrets — shared instance, additional environments
+# ---------------------------------------------------------------------------
+
+# When multiple environments share one RDS instance (e.g. dev and staging on
+# the same cluster), we store the same DATABASE_URL under each environment's
+# own secret path. Each environment's ESO then reads its own path without
+# cross-reading another environment's secret.
+#
+# We use for_each over a set so Terraform tracks each secret independently.
+# Adding a new name only creates one new resource; removing a name only
+# destroys that one secret. Using count would renumber everything on changes.
+resource "aws_secretsmanager_secret" "extra" {
+  for_each    = toset(var.extra_secret_names)
+  name        = each.key
+  description = "RDS PostgreSQL credentials for guestbook (shared from ${var.env_name} instance)"
+
+  tags = {
+    Project     = "guestbook"
+    Environment = var.env_name
+    ManagedBy   = "terragrunt"
+  }
+}
+
+resource "aws_secretsmanager_secret_version" "extra" {
+  for_each  = toset(var.extra_secret_names)
+  secret_id = aws_secretsmanager_secret.extra[each.key].id
+
+  # Identical DATABASE_URL to the primary secret — same host, same database,
+  # same user. The only difference is the Secrets Manager path used by each
+  # environment's ESO ExternalSecret to find it.
+  secret_string = jsonencode({
+    url      = "postgresql://${var.db_username}:${random_password.db.result}@${aws_db_instance.db.address}:${aws_db_instance.db.port}/${var.db_name}"
+    username = var.db_username
+    password = random_password.db.result
+    host     = aws_db_instance.db.address
+    port     = tostring(aws_db_instance.db.port)
+    dbname   = var.db_name
+  })
+}

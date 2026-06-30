@@ -73,3 +73,9 @@ variable "eso_namespace" {
   type        = string
   default     = "external-secrets"
 }
+
+variable "eso_secret_name_prefixes" {
+  description = "Secrets Manager secret name prefixes ESO is allowed to read. Defaults to [\"guestbook/{env_name}\"] when empty. Override when a cluster serves multiple environments — e.g. [\"guestbook/dev\", \"guestbook/staging\"] for the dev cluster that hosts both namespaces."
+  type        = list(string)
+  default     = []
+}

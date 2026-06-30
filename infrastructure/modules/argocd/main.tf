@@ -109,6 +109,12 @@ locals {
     "arn:aws:iam::${var.account_id}:oidc-provider/",
     ""
   )
+
+  # When eso_secret_name_prefixes is empty, fall back to the environment's own
+  # prefix. This keeps single-environment clusters (prod) simple — no override
+  # needed. Multi-environment clusters (dev hosting dev+staging) pass an
+  # explicit list so the IAM policy covers all required paths.
+  resolved_eso_prefixes = length(var.eso_secret_name_prefixes) > 0 ? var.eso_secret_name_prefixes : ["guestbook/${var.env_name}"]
 }
 
 # IAM role ESO assumes via IRSA (IAM Roles for Service Accounts).
@@ -150,8 +156,12 @@ resource "aws_iam_role" "eso" {
 }
 
 # ESO only needs to read secrets — no write, no list, no delete.
-# Scoped to guestbook/{env}/* so a leak of this role cannot read
-# secrets from any other project or environment in the same account.
+# Resource is a list of ARNs, one per prefix in resolved_eso_prefixes.
+# For the dev cluster (hosting dev + staging), this expands to two ARNs:
+#   guestbook/dev/* and guestbook/staging/*
+# For prod, it stays as a single ARN: guestbook/prod/*
+# The wildcard suffix (*) is required because Secrets Manager appends a
+# random 6-character suffix to every secret ARN for uniqueness.
 resource "aws_iam_role_policy" "eso_secrets" {
   name = "eso-secrets-manager"
   role = aws_iam_role.eso.id
@@ -164,7 +174,10 @@ resource "aws_iam_role_policy" "eso_secrets" {
         "secretsmanager:GetSecretValue",
         "secretsmanager:DescribeSecret",
       ]
-      Resource = "arn:aws:secretsmanager:${var.region}:${var.account_id}:secret:guestbook/${var.env_name}/*"
+      Resource = [
+        for prefix in local.resolved_eso_prefixes :
+        "arn:aws:secretsmanager:${var.region}:${var.account_id}:secret:${prefix}/*"
+      ]
     }]
   })
 }
