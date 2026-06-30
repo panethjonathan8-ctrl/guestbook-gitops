@@ -57,11 +57,13 @@ resource "helm_release" "argocd_apps" {
   namespace  = var.argocd_namespace
   wait       = true
 
+  # argocd-apps chart v2.0.0+ changed applications from a list to a map.
+  # The map key becomes metadata.name — using a list produced numeric indices
+  # as names, causing "cannot unmarshal number into metadata.name".
   values = [
     yamlencode({
-      applications = [
-        {
-          name      = "app-of-apps"
+      applications = {
+        "app-of-apps" = {
           namespace = var.argocd_namespace
           project   = "default"
           source = {
@@ -84,7 +86,7 @@ resource "helm_release" "argocd_apps" {
             syncOptions = ["CreateNamespace=true"]
           }
         }
-      ]
+      }
     })
   ]
 }
