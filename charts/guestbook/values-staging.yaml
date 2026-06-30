@@ -2,7 +2,7 @@ replicaCount: 2
 
 image:
   repository: "400013494612.dkr.ecr.eu-west-1.amazonaws.com/guestbook"
-  tag: "615bd89"
+  tag: "2bed281"
 
 env:
   ENV_NAME: staging
@@ -20,6 +20,7 @@ resources:
     memory: 512Mi
 
 externalSecret:
+  enabled: true
   remoteSecretName: guestbook/staging/db-secret
 
 resourceQuota:

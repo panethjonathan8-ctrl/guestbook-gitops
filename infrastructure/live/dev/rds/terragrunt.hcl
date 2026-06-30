@@ -40,4 +40,9 @@ inputs = {
   deletion_protection     = false
   backup_retention_period = 0
   multi_az                = false
+
+  # Staging shares this RDS instance — same host, same database, same user.
+  # A second Secrets Manager secret at guestbook/staging/db-secret holds the
+  # same DATABASE_URL so staging's ESO can read its own path independently.
+  extra_secret_names = ["guestbook/staging/db-secret"]
 }

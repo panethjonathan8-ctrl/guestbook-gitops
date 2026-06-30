@@ -21,4 +21,9 @@ inputs = {
   cluster_endpoint  = dependency.eks.outputs.cluster_endpoint
   cluster_ca        = dependency.eks.outputs.cluster_certificate_authority_data
   oidc_provider_arn = dependency.eks.outputs.oidc_provider_arn
+
+  # The dev cluster hosts both the 'dev' and 'staging' namespaces.
+  # ESO on this cluster must be allowed to read secrets for both environments.
+  # Without this, staging's ExternalSecret would get AccessDenied from Secrets Manager.
+  eso_secret_name_prefixes = ["guestbook/dev", "guestbook/staging"]
 }

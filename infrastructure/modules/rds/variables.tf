@@ -75,3 +75,9 @@ variable "multi_az" {
   type        = bool
   default     = false
 }
+
+variable "extra_secret_names" {
+  description = "Additional Secrets Manager secret names to create with the same DATABASE_URL as the primary secret. Use this to share one RDS instance across multiple environments (e.g. dev and staging on the same cluster) without creating a second database instance."
+  type        = list(string)
+  default     = []
+}
