@@ -179,8 +179,6 @@ resource "aws_iam_role_policy" "eso_secrets" {
 # The service account annotation is how IRSA works: the EKS token webhook sees
 # the annotation and injects the AWS_ROLE_ARN env var so the SDK can call STS.
 resource "helm_release" "eso" {
-  depends_on = [helm_release.argocd]
-
   name             = "external-secrets"
   repository       = "https://charts.external-secrets.io"
   chart            = "external-secrets"
