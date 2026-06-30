@@ -77,14 +77,13 @@ spec:
             - name: DB_PATH
               value: {{ .Values.persistence.mountPath }}/guestbook.db
 
-            # Synced from AWS Secrets Manager by the External Secrets Operator.
-            # Presence = "db: connected". Absence = "db: disconnected".
-            # Visual proof that ESO is working during the demo.
+            {{- if .Values.externalSecret.enabled }}
             - name: DB_SECRET
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.externalSecret.targetSecretName }}
                   key: password
+            {{- end }}
 
           # Liveness probe: Kubernetes restarts the pod if this fails.
           # Uses the /health endpoint we defined in main.py.
