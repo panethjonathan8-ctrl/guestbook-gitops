@@ -51,3 +51,25 @@ variable "argocd_namespace" {
   type        = string
   default     = "argocd"
 }
+
+variable "oidc_provider_arn" {
+  description = "ARN of the EKS OIDC provider. Used in the ESO IRSA trust policy so ESO pods can assume the IAM role without static credentials."
+  type        = string
+}
+
+variable "account_id" {
+  description = "AWS account ID. Used to scope the Secrets Manager IAM policy to this account."
+  type        = string
+}
+
+variable "eso_chart_version" {
+  description = "Version of the external-secrets Helm chart to install."
+  type        = string
+  default     = "0.10.3"
+}
+
+variable "eso_namespace" {
+  description = "Kubernetes namespace ESO will be installed into."
+  type        = string
+  default     = "external-secrets"
+}
