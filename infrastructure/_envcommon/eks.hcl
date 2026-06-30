@@ -31,7 +31,11 @@ inputs = {
   cluster_enabled_log_types   = []
 
   # No KMS key — dev cluster does not need secrets encryption.
-  create_kms_key = false
+  create_kms_key     = false
+  # null tells the module enable_encryption_config = false, skipping the block.
+  # Default is {} (not null) which renders the block with a null key_arn — AWS
+  # provider v6 rejects that. Explicit null is the correct way to disable it.
+  encryption_config  = null
 
   eks_managed_node_groups = {
     guestbook = {
