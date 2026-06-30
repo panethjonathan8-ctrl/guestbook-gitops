@@ -19,7 +19,11 @@ resources:
     cpu: 500m
     memory: 512Mi
 
+persistence:
+  enabled: false
+
 externalSecret:
+  enabled: false
   remoteSecretName: guestbook/staging/db-secret
 
 resourceQuota:
