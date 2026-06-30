@@ -4,6 +4,7 @@
 locals {
   account      = read_terragrunt_config(find_in_parent_folders("account.hcl"))
   env          = read_terragrunt_config(find_in_parent_folders("env.hcl"))
+  account_id   = local.account.locals.account_id
   aws_region   = local.account.locals.aws_region
   env_name     = local.env.locals.env_name
   cluster_name = local.env.locals.cluster_name
@@ -15,6 +16,7 @@ terraform {
 
 inputs = {
   region          = local.aws_region
+  account_id      = local.account_id
   env_name        = local.env_name
   cluster_name    = local.cluster_name
   gitops_repo_url = "https://github.com/panethjonathan8-ctrl/guestbook-gitops.git"

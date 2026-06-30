@@ -2,6 +2,10 @@ terraform {
   required_version = ">= 1.6.0"
 
   required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 6.0"
+    }
     helm = {
       source  = "hashicorp/helm"
       version = "~> 2.17"
@@ -90,6 +94,172 @@ resource "helm_release" "argocd_apps" {
     })
   ]
 }
+
+# ---------------------------------------------------------------------------
+# External Secrets Operator (ESO)
+# ---------------------------------------------------------------------------
+
+# Extract the bare OIDC provider URL from the ARN so we can use it as the
+# condition key in the trust policy. The ARN format is:
+#   arn:aws:iam::<account>:oidc-provider/<url>
+# We need just the <url> part for the StringEquals condition.
+locals {
+  oidc_provider_url = replace(
+    var.oidc_provider_arn,
+    "arn:aws:iam::${var.account_id}:oidc-provider/",
+    ""
+  )
+}
+
+# IAM role ESO assumes via IRSA (IAM Roles for Service Accounts).
+#
+# How IRSA works:
+#   1. ESO runs in Kubernetes with a service account annotated with this role ARN.
+#   2. EKS projects a short-lived OIDC token into the pod's filesystem.
+#   3. When ESO calls AWS APIs, the AWS SDK exchanges that token for temporary
+#      credentials by calling sts:AssumeRoleWithWebIdentity.
+#   4. AWS validates the token against the EKS OIDC provider and checks the
+#      sub condition (must match the ESO service account exactly).
+#   5. Only the ESO service account in the ESO namespace can assume this role —
+#      no other pod can, even if it somehow gets the role ARN.
+resource "aws_iam_role" "eso" {
+  name = "guestbook-${var.env_name}-eso"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Federated = var.oidc_provider_arn
+      }
+      Action = "sts:AssumeRoleWithWebIdentity"
+      Condition = {
+        StringEquals = {
+          "${local.oidc_provider_url}:sub" = "system:serviceaccount:${var.eso_namespace}:external-secrets"
+          "${local.oidc_provider_url}:aud" = "sts.amazonaws.com"
+        }
+      }
+    }]
+  })
+
+  tags = {
+    Project     = "guestbook"
+    Environment = var.env_name
+    ManagedBy   = "terragrunt"
+  }
+}
+
+# ESO only needs to read secrets — no write, no list, no delete.
+# Scoped to guestbook/{env}/* so a leak of this role cannot read
+# secrets from any other project or environment in the same account.
+resource "aws_iam_role_policy" "eso_secrets" {
+  name = "eso-secrets-manager"
+  role = aws_iam_role.eso.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret",
+      ]
+      Resource = "arn:aws:secretsmanager:${var.region}:${var.account_id}:secret:guestbook/${var.env_name}/*"
+    }]
+  })
+}
+
+# Install the External Secrets Operator from the official Helm chart.
+# ESO registers the ExternalSecret and ClusterSecretStore CRDs. Without it,
+# kubectl (and ArgoCD) will reject any manifest that uses those types.
+#
+# installCRDs = true: the chart ships the CRD manifests — we let it manage them
+# rather than applying them separately, so upgrades stay in sync.
+#
+# The service account annotation is how IRSA works: the EKS token webhook sees
+# the annotation and injects the AWS_ROLE_ARN env var so the SDK can call STS.
+resource "helm_release" "eso" {
+  depends_on = [helm_release.argocd]
+
+  name             = "external-secrets"
+  repository       = "https://charts.external-secrets.io"
+  chart            = "external-secrets"
+  version          = var.eso_chart_version
+  namespace        = var.eso_namespace
+  create_namespace = true
+  wait             = true
+  timeout          = 300
+
+  values = [
+    yamlencode({
+      installCRDs = true
+      serviceAccount = {
+        annotations = {
+          "eks.amazonaws.com/role-arn" = aws_iam_role.eso.arn
+        }
+      }
+    })
+  ]
+}
+
+# Create the ClusterSecretStore named "aws-secrets-manager".
+# This name must match externalSecret.secretStoreName in charts/guestbook/values.yaml.
+#
+# ClusterSecretStore vs SecretStore:
+#   SecretStore is namespace-scoped — only ExternalSecrets in the same namespace
+#   can use it. ClusterSecretStore is cluster-scoped — any namespace can use it.
+#   One ClusterSecretStore serves both the dev and prod namespaces without
+#   duplicating the AWS auth config.
+#
+# The auth.jwt block tells ESO to use the external-secrets service account's
+# IRSA token when calling Secrets Manager — no static AWS credentials anywhere.
+#
+# We use a null_resource + local-exec (same pattern as the finalizer stripper)
+# instead of kubernetes_manifest because kubernetes_manifest tries to validate
+# the CRD schema at plan time — before ESO has installed the CRD. local-exec
+# runs only at apply time, after ESO is up and the CRD exists.
+resource "null_resource" "cluster_secret_store" {
+  depends_on = [helm_release.eso]
+
+  triggers = {
+    cluster_name  = var.cluster_name
+    region        = var.region
+    eso_role_arn  = aws_iam_role.eso.arn
+    eso_namespace = var.eso_namespace
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      aws eks update-kubeconfig \
+        --name ${var.cluster_name} \
+        --region ${var.region} \
+        --kubeconfig /tmp/kubeconfig-${var.cluster_name}
+
+      KUBECONFIG=/tmp/kubeconfig-${var.cluster_name} kubectl apply -f - <<'YAML'
+      apiVersion: external-secrets.io/v1beta1
+      kind: ClusterSecretStore
+      metadata:
+        name: aws-secrets-manager
+      spec:
+        provider:
+          aws:
+            service: SecretsManager
+            region: ${var.region}
+            auth:
+              jwt:
+                serviceAccountRef:
+                  name: external-secrets
+                  namespace: ${var.eso_namespace}
+      YAML
+
+      rm -f /tmp/kubeconfig-${var.cluster_name}
+    EOT
+  }
+}
+
+# ---------------------------------------------------------------------------
+# ArgoCD finalizer cleanup (runs on destroy, before ArgoCD is uninstalled)
+# ---------------------------------------------------------------------------
 
 # Strip ArgoCD Application finalizers before the Helm releases are deleted.
 #
