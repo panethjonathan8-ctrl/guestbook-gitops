@@ -22,6 +22,7 @@ resources:
     memory: 256Mi
 
 externalSecret:
+  enabled: false
   remoteSecretName: guestbook/dev/db-secret
 
 resourceQuota:
