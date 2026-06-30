@@ -16,6 +16,7 @@ terraform {
 inputs = {
   name               = local.cluster_name
   kubernetes_version = "1.36"
+  region             = local.aws_region
 
   # Public endpoint so kubectl works from a laptop.
   # Nodes are already in public subnets so there is no private endpoint needed.
