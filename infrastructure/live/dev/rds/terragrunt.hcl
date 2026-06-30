@@ -13,8 +13,8 @@ dependency "vpc" {
   config_path = "../vpc"
 
   mock_outputs = {
-    vpc_id         = "vpc-00000000"
-    public_subnets = ["subnet-00000000", "subnet-00000001"]
+    vpc_id          = "vpc-00000000"
+    private_subnets = ["subnet-00000000", "subnet-00000001"]
   }
   mock_outputs_allowed_terraform_commands = ["validate", "plan"]
 }
@@ -30,7 +30,7 @@ dependency "eks" {
 
 inputs = {
   vpc_id                 = dependency.vpc.outputs.vpc_id
-  subnet_ids             = dependency.vpc.outputs.public_subnets
+  subnet_ids             = dependency.vpc.outputs.private_subnets
   node_security_group_id = dependency.eks.outputs.node_security_group_id
 
   # Dev sizing: smallest instance, no backups, no deletion protection.

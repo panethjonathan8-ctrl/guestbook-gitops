@@ -22,9 +22,14 @@ inputs = {
   azs            = ["${local.aws_region}a", "${local.aws_region}b"]
   public_subnets = [cidrsubnet(local.vpc_cidr, 4, 0), cidrsubnet(local.vpc_cidr, 4, 1)]
 
-  # No private subnets, no NAT gateway — everything runs in public subnets.
-  # Nodes get public IPs via the IGW. Cost saving for an interview/demo project.
-  # Production would use private subnets + NAT to avoid direct node exposure.
+  # Private subnets for RDS — indices 2 and 3 of the same /4 split so they
+  # never overlap with the public subnets (indices 0 and 1).
+  # These subnets have no route to the internet gateway, which is exactly
+  # what a database needs: reachable from within the VPC, invisible from outside.
+  # No NAT gateway required — RDS only accepts inbound connections, it never
+  # initiates outbound calls, so there is nothing to NAT.
+  private_subnets = [cidrsubnet(local.vpc_cidr, 4, 2), cidrsubnet(local.vpc_cidr, 4, 3)]
+
   enable_nat_gateway      = false
   map_public_ip_on_launch = true
   enable_dns_hostnames    = true
@@ -35,6 +40,11 @@ inputs = {
   public_subnet_tags = {
     "kubernetes.io/role/elb"                      = "1"
     "kubernetes.io/cluster/${local.cluster_name}" = "owned"
+  }
+
+  # Tag private subnets so they are identifiable in the AWS console.
+  private_subnet_tags = {
+    "Tier" = "private"
   }
 
   tags = {
