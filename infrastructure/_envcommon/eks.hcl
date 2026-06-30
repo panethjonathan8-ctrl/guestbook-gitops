@@ -25,6 +25,13 @@ inputs = {
   # Enabling this alongside access_entries for the same principal causes a 409 conflict.
   enable_cluster_creator_admin_permissions = false
 
+  # No CloudWatch logging — not needed for this project.
+  create_cloudwatch_log_group = false
+  cluster_enabled_log_types   = []
+
+  # No KMS key — dev cluster does not need secrets encryption.
+  create_kms_key = false
+
   eks_managed_node_groups = {
     guestbook = {
       instance_types = ["t3.medium"]
