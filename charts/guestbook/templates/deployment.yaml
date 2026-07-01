@@ -5,7 +5,11 @@ metadata:
   labels:
     {{- include "guestbook.labels" . | nindent 4 }}
 spec:
+  {{- if not .Values.hpa.enabled }}
+  # When HPA is enabled, replicas is omitted so ArgoCD does not fight the HPA.
+  # HPA owns the replica count; the Deployment spec must not override it.
   replicas: {{ .Values.replicaCount }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "guestbook.selectorLabels" . | nindent 6 }}
@@ -19,6 +23,10 @@ spec:
       {{- end }}
     spec:
       serviceAccountName: {{ include "guestbook.serviceAccountName" . }}
+
+      # Grace period must be longer than the preStop sleep + longest request.
+      # 60s = 5s preStop sleep + up to 55s for in-flight requests to finish.
+      terminationGracePeriodSeconds: {{ .Values.gracefulTermination.terminationGracePeriodSeconds }}
 
       # Pod-level security: no container in this pod may run as root.
       securityContext:
@@ -40,6 +48,15 @@ spec:
             allowPrivilegeEscalation: false
             runAsNonRoot: true
             runAsUser: 1001
+
+          lifecycle:
+            preStop:
+              exec:
+                # Sleep before SIGTERM so NGINX has time to deregister this pod
+                # from its upstream list. Without this, NGINX may route new
+                # requests to the pod for a few seconds after it starts shutting
+                # down, causing connection resets.
+                command: ["/bin/sh", "-c", "sleep {{ .Values.gracefulTermination.preStopSleepSeconds }}"]
 
           ports:
             - name: http

@@ -70,6 +70,27 @@ externalSecret:
   # Name of the Kubernetes Secret ESO creates in this namespace.
   targetSecretName: guestbook-db-secret
 
+hpa:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  # Scale up when average CPU across pods exceeds this % of requests.cpu.
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+pdb:
+  enabled: false
+  # At least this many pods must stay available during a voluntary disruption
+  # (node drain, cluster upgrade). Set to 1 so a rolling drain never causes downtime.
+  minAvailable: 1
+
+gracefulTermination:
+  # Sleep in seconds before SIGTERM — gives NGINX time to deregister the pod.
+  preStopSleepSeconds: 5
+  # Total seconds Kubernetes waits before sending SIGKILL.
+  # Must be > preStopSleepSeconds + longest expected request duration.
+  terminationGracePeriodSeconds: 60
+
 # Caps the total resources this namespace can consume.
 # Prevents a broken dev deploy from starving staging on the same cluster.
 resourceQuota:

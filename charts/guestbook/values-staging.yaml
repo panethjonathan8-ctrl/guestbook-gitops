@@ -1,5 +1,14 @@
 replicaCount: 2
 
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+
+pdb:
+  minAvailable: 1
+  enabled: true
+
 image:
   repository: "400013494612.dkr.ecr.eu-west-1.amazonaws.com/guestbook"
   tag: "2bed281"
@@ -25,8 +34,11 @@ externalSecret:
 
 resourceQuota:
   hard:
+    # Sized for HPA maxReplicas (5 pods):
+    # requests: 5 × 100m cpu, 5 × 128Mi memory
+    # limits:   5 × 500m cpu, 5 × 512Mi memory
     requests.cpu: "1"
-    requests.memory: "512Mi"
-    limits.cpu: "2"
-    limits.memory: "1Gi"
+    requests.memory: "700Mi"
+    limits.cpu: "3"
+    limits.memory: "3Gi"
     pods: "10"
