@@ -10,3 +10,12 @@ applications:
   - name: guestbook-staging
     env: staging
     namespace: staging
+
+# Cluster-level apps — not tied to a specific application namespace.
+# cluster-ingress deploys the ALB Ingress into ingress-nginx so LBC creates
+# the single internet-facing ALB that fronts the NGINX Ingress Controller.
+clusterApps:
+  - name: cluster-ingress-dev
+    env: dev
+    chartPath: charts/cluster-ingress
+    namespace: ingress-nginx

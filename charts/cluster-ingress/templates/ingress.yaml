@@ -1,0 +1,34 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nginx-alb
+  namespace: {{ .Values.nginxNamespace }}
+  annotations:
+    # internet-facing: ALB gets a public IP. Use "internal" for private ALBs.
+    alb.ingress.kubernetes.io/scheme: internet-facing
+
+    # target-type: ip — ALB targets NGINX pod IPs directly via VPC routing.
+    # No NodePort hop. LBC auto-manages the SG rule that allows ALB → NGINX pods.
+    alb.ingress.kubernetes.io/target-type: ip
+
+    # Listen on HTTP :80 only. Add HTTPS here when a certificate is ready.
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+
+    # /healthz is the NGINX liveness endpoint — faster convergence than /.
+    alb.ingress.kubernetes.io/healthcheck-path: /healthz
+
+    # Tags visible in the AWS console so you can identify which cluster owns this ALB.
+    alb.ingress.kubernetes.io/tags: "Project=guestbook,Environment={{ .Values.envName }},ManagedBy=argocd"
+spec:
+  # ingressClassName: alb tells AWS LBC (not NGINX) to reconcile this Ingress.
+  ingressClassName: alb
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Values.nginxServiceName }}
+                port:
+                  number: {{ .Values.nginxServicePort }}
