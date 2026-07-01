@@ -34,17 +34,7 @@ variable "oidc_provider_arn" {
 }
 
 variable "vpc_id" {
-  description = "VPC ID the cluster and ALB live in. Passed to the LBC Helm chart so it knows which VPC to manage resources in."
-  type        = string
-}
-
-variable "public_subnet_ids" {
-  description = "Public subnet IDs where the ALB will be placed. Must span at least two AZs."
-  type        = list(string)
-}
-
-variable "node_security_group_id" {
-  description = "Security group ID of the EKS managed node group. The addons module adds a rule to allow the ALB to reach NGINX on NodePort range (30000-32767)."
+  description = "VPC ID passed to the LBC Helm chart so it knows which VPC to manage ALBs in."
   type        = string
 }
 
