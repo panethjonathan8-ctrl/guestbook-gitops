@@ -6,3 +6,10 @@ applications:
   - name: guestbook-prod
     env: prod
     namespace: prod
+
+# Cluster-level apps — see values-dev.yaml for explanation.
+clusterApps:
+  - name: cluster-ingress-prod
+    env: prod
+    chartPath: charts/cluster-ingress
+    namespace: ingress-nginx
