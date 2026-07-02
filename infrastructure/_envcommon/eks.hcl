@@ -40,11 +40,34 @@ inputs = {
   eks_managed_node_groups = {
     guestbook = {
       instance_types = ["t3.medium"]
-      # 2 nodes needed: ArgoCD + ESO + LBC + CoreDNS fills a single t3.medium
-      # (17 pod limit) before NGINX and the app can schedule.
+      # 2 nodes for now. Prefix delegation (below) removes the old 17-pod-
+      # per-node ceiling that used to force this count; 2 nodes is now sized
+      # for CPU/memory, not pod slots.
       min_size       = 1
       max_size       = 2
       desired_size   = 2
+
+      # AL2023 nodes use the "nodeadm" bootstrap, not the older bootstrap.sh
+      # script — kubelet flags are set via a NodeConfig cloud-init document,
+      # not bootstrap_extra_args (that path is Bottlerocket-only). Without
+      # this, kubelet's own --max-pods stays at the static per-instance-type
+      # table value (17 for t3.medium) even with CNI prefix delegation
+      # enabled — the CNI and kubelet compute their pod ceilings separately.
+      # 110 matches Kubernetes' own recommended per-node pod ceiling.
+      cloudinit_pre_nodeadm = [
+        {
+          content_type = "application/node.eks.aws"
+          content      = <<-EOT
+            ---
+            apiVersion: node.eks.aws/v1alpha1
+            kind: NodeConfig
+            spec:
+              kubelet:
+                config:
+                  maxPods: 110
+          EOT
+        }
+      ]
     }
   }
 
@@ -55,7 +78,21 @@ inputs = {
     # depends_on on node groups. Without this, nodes try to join before the CNI
     # DaemonSet is running, kubelet reports "cni plugin not initialized", and the
     # node group fails with CREATE_FAILED after 33 minutes.
-    vpc-cni            = { most_recent = true, before_compute = true }
+    #
+    # configuration_values enables prefix delegation: instead of handing out
+    # one IP per ENI slot (t3.medium's 3 ENIs x 6 IPs - 1 primary = 17 pods
+    # max, regardless of free CPU/memory), the CNI assigns a /28 (16 IPs) per
+    # slot, raising the ceiling to 110+ pods per node. Free — no new AWS
+    # resources, just a setting on an addon that's already deployed.
+    vpc-cni = {
+      most_recent          = true
+      before_compute       = true
+      configuration_values = jsonencode({
+        env = {
+          ENABLE_PREFIX_DELEGATION = "true"
+        }
+      })
+    }
   }
 
   # Grant cluster-admin to the guestbook-dev IAM user and the GitHub Actions CI role.
