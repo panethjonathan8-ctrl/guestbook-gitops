@@ -1,0 +1,99 @@
+# All values are nested under "loki:" because that is the dependency name
+# in Chart.yaml. Note the double-nesting: the outer "loki:" is the Helm
+# subchart prefix; the inner "loki:" is the chart's own config section for
+# the Loki daemon itself. This is standard Helm subchart behaviour.
+loki:
+
+  # ── Deployment mode ───────────────────────────────────────────────────────
+  # SingleBinary: all Loki components (ingester, querier, compactor) run
+  # inside one pod. Simple to operate. The alternative, "distributed", splits
+  # each component into a separate Deployment — better for large scale but
+  # adds many more pods than we can afford on this cluster.
+  deploymentMode: SingleBinary
+
+  loki:
+    # Multi-tenancy off — all logs go to the "fake" tenant. Simpler for a
+    # single-team project. Enable when multiple teams need log isolation.
+    auth_enabled: false
+
+    commonConfig:
+      # One replica = no replication. A pod restart loses in-flight log writes
+      # but not stored logs (unless using emptyDir, in which case all logs are
+      # lost). Acceptable for dev.
+      replication_factor: 1
+
+    storage:
+      # Filesystem storage — logs are written to the pod's local disk.
+      # No object store (S3/GCS) needed. Combined with emptyDir below, logs
+      # are lost on pod restart. For prod, change to type: s3 or add a PVC.
+      type: filesystem
+
+    schemaConfig:
+      configs:
+        # v13 schema with tsdb index — the current recommended schema.
+        # The "from" date must be in the past; Loki uses this to know which
+        # schema to apply when querying historical data.
+        - from: "2024-01-01"
+          store: tsdb
+          object_store: filesystem
+          schema: v13
+          index:
+            prefix: loki_index_
+            period: 24h
+
+  # ── Single binary component ───────────────────────────────────────────────
+  singleBinary:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+    persistence:
+      # emptyDir — no PVC. Logs are lost on pod restart.
+      enabled: false
+
+  # ── Disable distributed components ────────────────────────────────────────
+  # These Deployments only make sense in distributed mode. Setting replicas=0
+  # prevents them from creating pods. Without this, the chart creates empty
+  # Deployments that waste scheduler cycles.
+  read:
+    replicas: 0
+  write:
+    replicas: 0
+  backend:
+    replicas: 0
+
+  # ── Disable the gateway ───────────────────────────────────────────────────
+  # The gateway is an nginx proxy that sits in front of Loki. Useful for
+  # TLS termination and auth in production. Not needed here — Alloy and
+  # Grafana can reach the Loki pod directly. Disabling saves 1 pod.
+  gateway:
+    enabled: false
+
+  # ── Disable MinIO ─────────────────────────────────────────────────────────
+  # MinIO is an S3-compatible object store bundled with the chart for testing.
+  # We use local filesystem instead.
+  minio:
+    enabled: false
+
+  # ── Disable self-monitoring ───────────────────────────────────────────────
+  # Self-monitoring deploys a GrafanaAgent operator to observe Loki itself.
+  # Adds several pods. Not needed for a demo cluster.
+  monitoring:
+    selfMonitoring:
+      enabled: false
+      grafanaAgent:
+        installOperator: false
+    lokiCanary:
+      enabled: false
+    serviceMonitor:
+      # Keep the ServiceMonitor so Prometheus can scrape Loki's own metrics
+      # (ingestion rate, query latency) without any extra pods.
+      enabled: true
+
+  # Disable the test pod that Helm creates on `helm test`
+  test:
+    enabled: false

@@ -29,6 +29,12 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m
 {{- end }}
 
 {{- range .Values.clusterApps }}
@@ -59,4 +65,13 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      {{- range .extraSyncOptions }}
+      - {{ . }}
+      {{- end }}
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m
 {{- end }}

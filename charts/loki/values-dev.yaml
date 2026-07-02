@@ -1,0 +1,12 @@
+# Dev-specific overrides for Loki.
+# The base values.yaml already sets single-binary + emptyDir which is correct for dev.
+# No additional overrides needed at this stage.
+#
+# When prod runs with the EBS CSI driver, add a PVC in values-prod.yaml:
+#   loki:
+#     singleBinary:
+#       persistence:
+#         enabled: true
+#         storageClass: gp3
+#         size: 10Gi
+loki: {}

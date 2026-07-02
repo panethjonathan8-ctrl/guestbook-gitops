@@ -1,0 +1,8 @@
+# Dev-specific overrides for kube-prometheus-stack.
+# The base values.yaml already configures emptyDir storage which is correct for dev.
+# No additional overrides needed at this stage.
+#
+# Future dev-only overrides to add here:
+#   - Shorter scrape intervals for faster feedback during development
+#   - Reduced retention (e.g. 2d) if disk pressure becomes a concern
+kube-prometheus-stack: {}

@@ -1,0 +1,142 @@
+# All values are nested under "alloy:" because that is the dependency name
+# in Chart.yaml. The Alloy chart itself also uses an "alloy:" section for
+# the agent config, resulting in double-nesting (alloy.alloy.*). This is
+# standard Helm subchart behaviour, not a mistake.
+alloy:
+
+  # ── Controller: DaemonSet ─────────────────────────────────────────────────
+  # DaemonSet means Kubernetes schedules exactly one Alloy pod per node.
+  # When a new node joins the cluster, Kubernetes automatically adds an
+  # Alloy pod to it — no manual intervention needed.
+  controller:
+    type: daemonset
+
+  # ── Alloy agent configuration ─────────────────────────────────────────────
+  alloy:
+    # varlog: mount /var/log from the host into the Alloy pod so that
+    # loki.source.file can read container log files. EKS writes container
+    # logs to /var/log/pods/<uid>/<container>/*.log on each node.
+    mounts:
+      varlog: true
+
+    # Alloy needs to run as root to:
+    #   1. Read /var/log/pods (owned by root on the host)
+    #   2. Read /proc and /sys for prometheus.exporter.unix node metrics
+    # For production hardening, replace "privileged: true" with the minimum
+    # capabilities: [SYS_PTRACE, DAC_READ_SEARCH] and seccompProfile.
+    securityContext:
+      privileged: true
+      runAsUser: 0
+
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+
+    # ── Alloy pipeline config (River/Alloy syntax) ─────────────────────────
+    # Two independent pipelines are defined:
+    #   Pipeline A: Pod logs → Loki
+    #   Pipeline B: Node metrics → Prometheus
+    configMap:
+      content: |
+
+        // ── Pipeline A: Kubernetes pod logs → Loki ──────────────────────────
+
+        // Step 1: Discover all pods in the cluster via the Kubernetes API.
+        // Alloy uses its own ServiceAccount (created by the chart) with
+        // ClusterRole permissions to list and watch pods.
+        discovery.kubernetes "pods" {
+          role = "pod"
+        }
+
+        // Step 2: For each pod, compute the log file path and attach labels.
+        // The relabel rules transform Kubernetes metadata into Loki stream
+        // labels — these become the dimensions you filter on in Grafana.
+        discovery.relabel "pod_logs" {
+          targets = discovery.kubernetes.pods.targets
+
+          // Drop pods that are not in Running phase. Pending/Completed pods
+          // may not have log files yet or any more.
+          rule {
+            source_labels = ["__meta_kubernetes_pod_phase"]
+            regex         = "Pending|Succeeded|Failed|Completed"
+            action        = "drop"
+          }
+
+          // Build the path to the log file on the host.
+          // Format: /var/log/pods/<pod-uid>/<container-name>/*.log
+          rule {
+            source_labels = ["__meta_kubernetes_pod_uid", "__meta_kubernetes_pod_container_name"]
+            separator     = "/"
+            target_label  = "__path__"
+            replacement   = "/var/log/pods/*$1*/$2/*.log"
+          }
+
+          // Attach Kubernetes metadata as Loki stream labels.
+          // These let you filter in Grafana: {namespace="dev", app="guestbook"}
+          rule {
+            source_labels = ["__meta_kubernetes_namespace"]
+            target_label  = "namespace"
+          }
+          rule {
+            source_labels = ["__meta_kubernetes_pod_name"]
+            target_label  = "pod"
+          }
+          rule {
+            source_labels = ["__meta_kubernetes_pod_container_name"]
+            target_label  = "container"
+          }
+          rule {
+            source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+            target_label  = "app"
+          }
+        }
+
+        // Step 3: Tail the log files. Alloy watches each path for new lines
+        // and forwards them downstream. The /var/log mount makes the host
+        // paths visible inside the Alloy pod.
+        loki.source.file "pod_logs" {
+          targets    = discovery.relabel.pod_logs.output
+          forward_to = [loki.write.default.receiver]
+        }
+
+        // Step 4: Push log lines to Loki.
+        // loki is the Kubernetes service name (Helm release name = "loki",
+        // service port = 3100). The gateway is disabled so we hit Loki directly.
+        loki.write "default" {
+          endpoint {
+            url = "http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push"
+          }
+        }
+
+        // ── Pipeline B: Node-level metrics → Prometheus ─────────────────────
+        // This replaces the node-exporter DaemonSet that kube-prometheus-stack
+        // normally installs. Running it here saves 2 DaemonSet pods.
+
+        // Step 1: Collect standard node metrics from /proc and /sys.
+        // This component is the Go equivalent of the node_exporter binary.
+        // It exports: CPU, memory, disk I/O, network, filesystem, load average.
+        prometheus.exporter.unix "node" {}
+
+        // Step 2: Scrape the exporter and add a job label so Grafana's built-in
+        // "Node Exporter Full" dashboard (which filters on job="node-exporter")
+        // picks up the data without any dashboard edits.
+        prometheus.scrape "node" {
+          targets         = prometheus.exporter.unix.node.targets
+          forward_to      = [prometheus.remote_write.prom.receiver]
+          job_name        = "node-exporter"
+          scrape_interval = "15s"
+        }
+
+        // Step 3: Push node metrics to Prometheus via the remote_write endpoint.
+        // Requires enableRemoteWriteReceiver=true in kube-prometheus-stack values.
+        // The Prometheus service name is: <release-name>-prometheus
+        // (release name = ArgoCD app name = "kube-prometheus-stack")
+        prometheus.remote_write "prom" {
+          endpoint {
+            url = "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/write"
+          }
+        }
