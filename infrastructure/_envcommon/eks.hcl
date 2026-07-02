@@ -40,9 +40,11 @@ inputs = {
   eks_managed_node_groups = {
     guestbook = {
       instance_types = ["t3.medium"]
+      # 2 nodes needed: ArgoCD + ESO + LBC + CoreDNS fills a single t3.medium
+      # (17 pod limit) before NGINX and the app can schedule.
       min_size       = 1
-      max_size       = 1
-      desired_size   = 1
+      max_size       = 2
+      desired_size   = 2
     }
   }
 
@@ -56,11 +58,22 @@ inputs = {
     vpc-cni            = { most_recent = true, before_compute = true }
   }
 
-  # Grant the guestbook-dev IAM user cluster-admin via EKS access entries.
+  # Grant cluster-admin to the guestbook-dev IAM user and the GitHub Actions CI role.
   # Access entries replace the old aws-auth ConfigMap approach (EKS 1.28+).
   access_entries = {
     guestbook_dev = {
       principal_arn = "arn:aws:iam::${local.account_id}:user/guestbook-dev"
+      policy_associations = {
+        admin = {
+          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+          access_scope = {
+            type = "cluster"
+          }
+        }
+      }
+    }
+    github_actions = {
+      principal_arn = "arn:aws:iam::${local.account_id}:role/guestbook-github-actions"
       policy_associations = {
         admin = {
           policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
