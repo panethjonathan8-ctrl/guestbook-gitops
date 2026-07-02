@@ -3,7 +3,7 @@ replicaCount: 3
 hpa:
   enabled: true
   minReplicas: 3
-  maxReplicas: 8
+  maxReplicas: 5
 
 pdb:
   enabled: true
@@ -40,11 +40,12 @@ externalSecret:
 
 resourceQuota:
   hard:
-    # Sized for HPA maxReplicas (8 pods):
-    # requests: 8 × 200m cpu, 8 × 256Mi memory
-    # limits:   8 × 1000m cpu, 8 × 512Mi memory
-    requests.cpu: "2"
-    requests.memory: "2100Mi"
-    limits.cpu: "9"
-    limits.memory: "4200Mi"
-    pods: "15"
+    # Sized for HPA maxReplicas (5 pods) on 2 nodes.
+    # Raise maxReplicas to 8 and pods to 15 when prod runs on 3 nodes.
+    # requests: 5 × 200m cpu, 5 × 256Mi memory
+    # limits:   5 × 1000m cpu, 5 × 512Mi memory
+    requests.cpu: "1200m"
+    requests.memory: "1400Mi"
+    limits.cpu: "6"
+    limits.memory: "3Gi"
+    pods: "8"
