@@ -87,12 +87,29 @@ loki:
       enabled: false
       grafanaAgent:
         installOperator: false
-    lokiCanary:
-      enabled: false
     serviceMonitor:
       # Keep the ServiceMonitor so Prometheus can scrape Loki's own metrics
       # (ingestion rate, query latency) without any extra pods.
       enabled: true
+
+  # ── Disable the canary ────────────────────────────────────────────────────
+  # lokiCanary is a top-level key in chart 6.7.4, not nested under
+  # "monitoring:" — it used to live there in older chart versions. Putting it
+  # under monitoring: is a silent no-op (Helm ignores unknown keys), which is
+  # how this ran as 2 unwanted DaemonSet pods for a while. Disabling it saves
+  # 2 pods (one per node) on a cluster that can't spare them.
+  lokiCanary:
+    enabled: false
+
+  # ── Disable the query caches ──────────────────────────────────────────────
+  # resultsCache and chunksCache are memcached sidecars that speed up repeat
+  # queries. Both default to enabled: true and were never overridden before,
+  # so they ran unintentionally. At our log volume the cache isn't worth the
+  # 2 extra pods it costs — queries just hit storage directly instead.
+  resultsCache:
+    enabled: false
+  chunksCache:
+    enabled: false
 
   # Disable the test pod that Helm creates on `helm test`
   test:
