@@ -10,8 +10,8 @@ terraform {
 }
 
 resource "aws_iam_openid_connect_provider" "github" {
-  url             = "https://token.actions.githubusercontent.com"
-  client_id_list  = ["sts.amazonaws.com"]
+  url            = "https://token.actions.githubusercontent.com"
+  client_id_list = ["sts.amazonaws.com"]
   # Two thumbprints cover GitHub's OIDC IdP certificate rotation.
   thumbprint_list = [
     "6938fd4d98bab03faadb97b34396831e3780aea1",
@@ -40,6 +40,22 @@ resource "aws_iam_role" "github_actions" {
             "token.actions.githubusercontent.com:sub" = "repo:${var.github_repo}:*"
           }
         }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "eks_access" {
+  name = "eks-access"
+  role = aws_iam_role.github_actions.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["eks:DescribeCluster"]
+        Resource = "*"
       }
     ]
   })
