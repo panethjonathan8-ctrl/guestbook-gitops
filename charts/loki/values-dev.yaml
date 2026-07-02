@@ -1,8 +1,11 @@
 # Dev-specific overrides for Loki.
-# The base values.yaml already sets single-binary + emptyDir which is correct for dev.
-# No additional overrides needed at this stage.
+# The base values.yaml already sets singleBinary.persistence.enabled: false
+# plus an explicit emptyDir volume/mount at /var/loki, which is correct for
+# dev. No additional overrides needed at this stage.
 #
-# When prod runs with the EBS CSI driver, add a PVC in values-prod.yaml:
+# When prod runs with the EBS CSI driver, switch to a real PVC in
+# values-prod.yaml and remove the extraVolumes/extraVolumeMounts override
+# from the base values.yaml so persistence.enabled: true takes over:
 #   loki:
 #     singleBinary:
 #       persistence:

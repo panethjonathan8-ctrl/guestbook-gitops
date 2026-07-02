@@ -52,8 +52,20 @@ loki:
         cpu: 200m
         memory: 256Mi
     persistence:
-      # emptyDir — no PVC. Logs are lost on pod restart.
+      # No PVC — disabling this does NOT give an emptyDir for free. The
+      # chart's statefulset template only mounts /var/loki when
+      # persistence.enabled is true (as a PVC); with it false, nothing
+      # is mounted there at all. Combined with the chart's default
+      # readOnlyRootFilesystem: true, Loki's own `mkdir /var/loki` on
+      # startup then fails against a read-only root fs. We declare the
+      # emptyDir ourselves below instead of relying on the chart to do it.
       enabled: false
+    extraVolumes:
+      - name: storage
+        emptyDir: {}
+    extraVolumeMounts:
+      - name: storage
+        mountPath: /var/loki
 
   # ── Disable distributed components ────────────────────────────────────────
   # These Deployments only make sense in distributed mode. Setting replicas=0
