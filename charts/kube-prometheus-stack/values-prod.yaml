@@ -1,0 +1,20 @@
+# Prod-specific overrides for kube-prometheus-stack.
+# Currently identical to dev (emptyDir, no persistence).
+#
+# When prod runs on 3 nodes with the EBS CSI driver, replace the empty storageSpec
+# in this file to add a 20Gi gp3 PersistentVolumeClaim for Prometheus:
+#
+# kube-prometheus-stack:
+#   prometheus:
+#     prometheusSpec:
+#       storageSpec:
+#         volumeClaimTemplate:
+#           spec:
+#             storageClassName: gp3
+#             accessModes: [ReadWriteOnce]
+#             resources:
+#               requests:
+#                 storage: 20Gi
+#
+# Also replace adminPassword with an existingSecret backed by ESO + Secrets Manager.
+kube-prometheus-stack: {}

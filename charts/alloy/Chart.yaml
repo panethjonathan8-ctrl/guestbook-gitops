@@ -1,0 +1,14 @@
+apiVersion: v2
+name: alloy
+description: >
+  Wrapper chart for Grafana Alloy, the unified observability agent.
+  Deployed as a DaemonSet — one pod runs on every node automatically.
+  Does two jobs: collects container logs from /var/log/pods and ships
+  them to Loki; and exports node-level metrics (CPU, memory, disk,
+  network) to Prometheus via remote_write — replacing node-exporter.
+type: application
+version: 0.1.0
+dependencies:
+  - name: alloy
+    version: "0.9.2"
+    repository: https://grafana.github.io/helm-charts

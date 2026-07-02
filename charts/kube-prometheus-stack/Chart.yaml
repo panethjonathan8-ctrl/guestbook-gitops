@@ -1,0 +1,14 @@
+apiVersion: v2
+name: kube-prometheus-stack
+description: >
+  Wrapper chart for kube-prometheus-stack.
+  Installs Prometheus, Grafana, and kube-state-metrics.
+  AlertManager is disabled (no alerting rules yet).
+  node-exporter is disabled — Alloy's prometheus.exporter.unix replaces it,
+  saving 2 DaemonSet pods across the cluster.
+type: application
+version: 0.1.0
+dependencies:
+  - name: kube-prometheus-stack
+    version: "65.1.1"
+    repository: https://prometheus-community.github.io/helm-charts

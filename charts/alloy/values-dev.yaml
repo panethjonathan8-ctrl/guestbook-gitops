@@ -1,0 +1,3 @@
+# Dev-specific overrides for Alloy.
+# The base values.yaml config works for both dev and prod — no overrides needed.
+alloy: {}

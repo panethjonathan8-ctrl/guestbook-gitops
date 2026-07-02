@@ -1,0 +1,12 @@
+# Prod-specific overrides for Loki.
+# Currently identical to dev (emptyDir, no persistence).
+#
+# When prod runs on 3 nodes with the EBS CSI driver, enable persistence here:
+#
+# loki:
+#   singleBinary:
+#     persistence:
+#       enabled: true
+#       storageClass: gp3
+#       size: 10Gi
+loki: {}

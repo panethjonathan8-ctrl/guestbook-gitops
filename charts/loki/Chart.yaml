@@ -1,0 +1,13 @@
+apiVersion: v2
+name: loki
+description: >
+  Wrapper chart for Grafana Loki in single-binary mode.
+  Single-binary means one pod handles reads, writes, and compaction —
+  the simplest deployment model, sufficient for a small cluster.
+  For high log volumes (>50GB/day), migrate to microservices mode.
+type: application
+version: 0.1.0
+dependencies:
+  - name: loki
+    version: "6.7.4"
+    repository: https://grafana.github.io/helm-charts

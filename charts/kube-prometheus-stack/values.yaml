@@ -1,0 +1,93 @@
+# All values are nested under "kube-prometheus-stack:" because that is the
+# dependency name in Chart.yaml. Helm routes values to the subchart by matching
+# the key name to the dependency name.
+kube-prometheus-stack:
+
+  # ── AlertManager ──────────────────────────────────────────────────────────
+  # Disabled: no alerting rules defined yet. Saves 1 pod.
+  # Enable and configure a Slack/PagerDuty receiver when adding on-call rules.
+  alertmanager:
+    enabled: false
+
+  # ── node-exporter ─────────────────────────────────────────────────────────
+  # Disabled: Alloy's prometheus.exporter.unix component provides identical
+  # metrics (CPU, memory, disk, network per node) from inside the Alloy DaemonSet.
+  # Disabling this saves 2 pods (one per node) across the cluster.
+  prometheus-node-exporter:
+    enabled: false
+
+  # ── Prometheus ────────────────────────────────────────────────────────────
+  prometheus:
+    prometheusSpec:
+      # Accept ServiceMonitors and PodMonitors from all namespaces, not just the
+      # release namespace. Without this, Alloy's ServiceMonitor (in monitoring)
+      # would be ignored and node metrics would never be scraped.
+      serviceMonitorSelectorNilUsesHelmValues: false
+      podMonitorSelectorNilUsesHelmValues: false
+
+      # Alloy pushes node metrics via remote_write. Prometheus must expose the
+      # /api/v1/write endpoint for this to work. Without this flag, Alloy's
+      # remote_write requests return 404.
+      enableRemoteWriteReceiver: true
+
+      # emptyDir — no PersistentVolumeClaim. Data is lost when the Prometheus
+      # pod restarts. Acceptable for a demo cluster.
+      # When prod runs with the EBS CSI driver, override this in values-prod.yaml
+      # with a storageSpec.volumeClaimTemplate.
+      storageSpec: {}
+
+      # 7-day retention. Default is 24h which is too short for trend analysis.
+      retention: 7d
+
+      resources:
+        requests:
+          cpu: 200m
+          memory: 512Mi
+        limits:
+          cpu: 500m
+          memory: 1Gi
+
+  # ── Grafana ───────────────────────────────────────────────────────────────
+  grafana:
+    enabled: true
+
+    # No adminPassword set — the chart auto-generates a random one and stores it
+    # in Secret "kube-prometheus-stack-grafana" (key: admin-password).
+    # Retrieve when needed:
+    #   kubectl get secret kube-prometheus-stack-grafana -n monitoring \
+    #     -o jsonpath='{.data.admin-password}' | base64 -d
+    # This account is a break-glass fallback only.
+    # Day-to-day login will use GitHub SSO (issue #54).
+
+    # Auto-configure Loki as a second datasource alongside the default Prometheus.
+    # Prometheus is already pre-configured by the chart. Loki must be added here
+    # so Grafana's Explore → Logs view works without manual setup.
+    additionalDataSources:
+      - name: Loki
+        type: loki
+        url: http://loki.monitoring.svc.cluster.local:3100
+        access: proxy
+        isDefault: false
+        jsonData:
+          maxLines: 1000
+
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+
+  # ── kube-state-metrics ────────────────────────────────────────────────────
+  # Watches the Kubernetes API and exports object-level metrics:
+  # pod states, deployment replica counts, job statuses, etc.
+  # Enabled by default — no changes needed other than resource limits.
+  kube-state-metrics:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        cpu: 50m
+        memory: 64Mi

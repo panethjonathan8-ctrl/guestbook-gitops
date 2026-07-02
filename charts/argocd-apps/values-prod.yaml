@@ -13,3 +13,23 @@ clusterApps:
     env: prod
     chartPath: charts/cluster-ingress
     namespace: ingress-nginx
+
+  # ── Observability stack — mirrors dev config (emptyDir storage for now).
+  # When prod runs on 3 nodes with the EBS CSI driver, update values-prod.yaml
+  # inside each chart to use a PersistentVolumeClaim instead of emptyDir.
+  - name: kube-prometheus-stack
+    env: prod
+    chartPath: charts/kube-prometheus-stack
+    namespace: monitoring
+    extraSyncOptions:
+      - ServerSideApply=true
+
+  - name: loki
+    env: prod
+    chartPath: charts/loki
+    namespace: monitoring
+
+  - name: alloy
+    env: prod
+    chartPath: charts/alloy
+    namespace: monitoring

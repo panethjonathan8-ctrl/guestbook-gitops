@@ -1,0 +1,4 @@
+# Prod-specific overrides for Alloy.
+# The base values.yaml config works for both dev and prod — no overrides needed.
+# When prod runs on 3 nodes, Alloy automatically scales to 3 pods (DaemonSet).
+alloy: {}

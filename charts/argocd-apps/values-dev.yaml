@@ -19,3 +19,32 @@ clusterApps:
     env: dev
     chartPath: charts/cluster-ingress
     namespace: ingress-nginx
+
+  # ── Observability stack (7 pods total) ──────────────────────────────────
+  # kube-prometheus-stack: Prometheus (metrics db) + Grafana (dashboards)
+  #   + kube-state-metrics (Kubernetes object metrics). AlertManager and
+  #   node-exporter are disabled — Alloy replaces node-exporter.
+  # ServerSideApply=true is required because some kube-prometheus-stack CRDs
+  # exceed the 256KB annotation limit that kubectl apply enforces.
+  - name: kube-prometheus-stack
+    env: dev
+    chartPath: charts/kube-prometheus-stack
+    namespace: monitoring
+    extraSyncOptions:
+      - ServerSideApply=true
+
+  # loki: Log aggregation database. All pod logs flow from Alloy → Loki.
+  # Grafana queries Loki for the "Logs" panel alongside Prometheus metrics.
+  - name: loki
+    env: dev
+    chartPath: charts/loki
+    namespace: monitoring
+
+  # alloy: DaemonSet agent (1 pod per node). Dual role:
+  #   1. Tails /var/log/pods on each node and ships logs to Loki.
+  #   2. Runs prometheus.exporter.unix (node-exporter equivalent) and
+  #      remote_writes node metrics to Prometheus.
+  - name: alloy
+    env: dev
+    chartPath: charts/alloy
+    namespace: monitoring
