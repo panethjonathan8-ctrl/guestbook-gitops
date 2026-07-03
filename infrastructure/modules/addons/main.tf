@@ -10,6 +10,10 @@ terraform {
       source  = "hashicorp/helm"
       version = "~> 2.17"
     }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.33"
+    }
   }
 }
 
@@ -22,6 +26,19 @@ provider "helm" {
       command     = "aws"
       args        = ["eks", "get-token", "--cluster-name", var.cluster_name, "--region", var.region]
     }
+  }
+}
+
+# Needed for the plain "gp3" StorageClass below — that's a native Kubernetes
+# object, not a Helm release, so it goes through the kubernetes provider
+# instead of the helm provider. Same auth mechanism as the helm provider above.
+provider "kubernetes" {
+  host                   = var.cluster_endpoint
+  cluster_ca_certificate = base64decode(var.cluster_ca)
+  exec {
+    api_version = "client.authentication.k8s.io/v1beta1"
+    command     = "aws"
+    args        = ["eks", "get-token", "--cluster-name", var.cluster_name, "--region", var.region]
   }
 }
 
@@ -142,8 +159,8 @@ resource "aws_iam_role_policy" "lbc" {
         Resource = "*"
       },
       {
-        Effect = "Allow"
-        Action = ["ec2:CreateSecurityGroup"]
+        Effect   = "Allow"
+        Action   = ["ec2:CreateSecurityGroup"]
         Resource = "*"
       },
       {
@@ -357,4 +374,106 @@ resource "helm_release" "nginx" {
       }
     })
   ]
+}
+
+# ---------------------------------------------------------------------------
+# EBS CSI driver — IRSA, EKS addon, default StorageClass
+# ---------------------------------------------------------------------------
+# Prod-only (enable_ebs_csi_driver defaults to false). Gives Prometheus and
+# Loki real EBS-backed PersistentVolumeClaims instead of emptyDir, so their
+# data survives a pod restart, not just a running cluster.
+
+# CSI driver calls AWS APIs (ec2:CreateVolume, AttachVolume, DeleteVolume,
+# etc.) to provision real disks in response to PVCs. IRSA — same pattern as
+# the LBC role above: only the ebs-csi-controller-sa service account in
+# kube-system can assume this role, no other pod on the cluster can.
+resource "aws_iam_role" "ebs_csi" {
+  count = var.enable_ebs_csi_driver ? 1 : 0
+
+  name = "guestbook-${var.env_name}-ebs-csi"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Federated = var.oidc_provider_arn }
+      Action    = "sts:AssumeRoleWithWebIdentity"
+      Condition = {
+        StringEquals = {
+          "${local.oidc_provider_url}:sub" = "system:serviceaccount:kube-system:ebs-csi-controller-sa"
+          "${local.oidc_provider_url}:aud" = "sts.amazonaws.com"
+        }
+      }
+    }]
+  })
+
+  tags = {
+    Project     = "guestbook"
+    Environment = var.env_name
+    ManagedBy   = "terragrunt"
+  }
+}
+
+# AWS-managed policy scoped to exactly what the CSI driver needs (create,
+# attach, detach, delete, describe volumes/snapshots) — no broader ec2:*.
+resource "aws_iam_role_policy_attachment" "ebs_csi" {
+  count = var.enable_ebs_csi_driver ? 1 : 0
+
+  role       = aws_iam_role.ebs_csi[0].name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+}
+
+# Resolves the latest addon version compatible with the cluster's Kubernetes
+# version at apply time — same "most_recent" idea used for vpc-cni/coredns
+# in _envcommon/eks.hcl, just done manually here since this is a standalone
+# aws_eks_addon resource rather than going through the EKS module's addon block.
+data "aws_eks_addon_version" "ebs_csi" {
+  count = var.enable_ebs_csi_driver ? 1 : 0
+
+  addon_name         = "aws-ebs-csi-driver"
+  kubernetes_version = var.kubernetes_version
+  most_recent        = true
+}
+
+resource "aws_eks_addon" "ebs_csi" {
+  count = var.enable_ebs_csi_driver ? 1 : 0
+
+  cluster_name                = var.cluster_name
+  addon_name                  = "aws-ebs-csi-driver"
+  addon_version               = data.aws_eks_addon_version.ebs_csi[0].version
+  service_account_role_arn    = aws_iam_role.ebs_csi[0].arn
+  resolve_conflicts_on_update = "OVERWRITE"
+
+  tags = {
+    Project     = "guestbook"
+    Environment = var.env_name
+    ManagedBy   = "terragrunt"
+  }
+}
+
+# EKS does not ship a default StorageClass for CSI-based dynamic provisioning
+# — without this, a PVC with storageClassName: gp3 would sit Pending forever
+# with nothing to bind it. WaitForFirstConsumer delays volume creation until
+# a pod actually claims it, so the volume gets created in the same
+# Availability Zone as the node the pod is scheduled to (EBS volumes are
+# zonal — creating it too early can pick the wrong AZ).
+resource "kubernetes_storage_class_v1" "gp3" {
+  count = var.enable_ebs_csi_driver ? 1 : 0
+
+  depends_on = [aws_eks_addon.ebs_csi]
+
+  metadata {
+    name = "gp3"
+    annotations = {
+      "storageclass.kubernetes.io/is-default-class" = "true"
+    }
+  }
+
+  storage_provisioner = "ebs.csi.aws.com"
+  reclaim_policy      = "Delete"
+  volume_binding_mode = "WaitForFirstConsumer"
+
+  parameters = {
+    type = "gp3"
+  }
 }
