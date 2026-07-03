@@ -1,12 +1,22 @@
 # Prod-specific overrides for Loki.
-# Currently identical to dev (emptyDir, no persistence).
 #
-# When prod runs on 3 nodes with the EBS CSI driver, enable persistence here:
+# Persistence: prod has the EBS CSI driver + a default "gp3" StorageClass
+# (see infrastructure/modules/addons, issue #65). Setting persistence.enabled
+# makes the chart create a real volumeClaimTemplate named "storage" and mount
+# it at /var/loki.
 #
-# loki:
-#   singleBinary:
-#     persistence:
-#       enabled: true
-#       storageClass: gp3
-#       size: 10Gi
-loki: {}
+# extraVolumes/extraVolumeMounts must be cleared here (set to empty lists) —
+# the base values.yaml sets those to an emptyDir named "storage" as the #61
+# workaround for when persistence is disabled. With persistence.enabled: true
+# the chart already creates its own volume also named "storage"; leaving the
+# base override in place would produce two volumes with the same name and
+# fail to deploy. Helm value files replace lists wholesale (no merge), so
+# setting empty lists here fully overrides the base file's emptyDir workaround.
+loki:
+  singleBinary:
+    persistence:
+      enabled: true
+      storageClass: gp3
+      size: 10Gi
+    extraVolumes: []
+    extraVolumeMounts: []

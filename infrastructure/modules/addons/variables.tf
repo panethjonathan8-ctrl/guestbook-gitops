@@ -61,3 +61,15 @@ variable "nginx_namespace" {
   type        = string
   default     = "ingress-nginx"
 }
+
+variable "enable_ebs_csi_driver" {
+  description = "Whether to install the AWS EBS CSI driver and a default gp3 StorageClass. Prod-only — dev stays on emptyDir, so this defaults to false."
+  type        = bool
+  default     = false
+}
+
+variable "kubernetes_version" {
+  description = "Kubernetes version of the EKS cluster. Used to resolve the correct EBS CSI driver addon version. Only required when enable_ebs_csi_driver is true."
+  type        = string
+  default     = null
+}
