@@ -23,7 +23,7 @@ inputs = {
   oidc_provider_arn = dependency.eks.outputs.oidc_provider_arn
 
   # Prod-only: GitHub SSO via Dex + RBAC allow-list. See issue #53.
-  enable_sso          = true
-  sso_hostname        = "argocd.guestbookinterview.lol"
-  sso_github_username = "panethjonathan8-ctrl"
+  enable_sso      = true
+  sso_hostname    = "argocd.guestbookinterview.lol"
+  sso_admin_email = "panethjonathan8@gmail.com"
 }
