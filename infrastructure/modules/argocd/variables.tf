@@ -92,8 +92,8 @@ variable "sso_hostname" {
   default     = null
 }
 
-variable "sso_github_username" {
-  description = "The single GitHub username granted role:admin via RBAC when SSO is enabled. Every other GitHub login authenticates successfully but gets zero access (policy.default is empty). Only required when enable_sso is true."
+variable "sso_admin_email" {
+  description = "The single email address granted role:admin via RBAC when SSO is enabled. Must match the 'email' claim Dex receives from GitHub, NOT the GitHub username/login — ArgoCD's RBAC matches SSO identities on the sub/email/groups claims, and Dex's GitHub connector returns an opaque sub and no groups (no org configured), so email is the only reliably matchable claim. Every other GitHub login authenticates successfully but gets zero access (policy.default is empty). Only required when enable_sso is true."
   type        = string
   default     = null
 }

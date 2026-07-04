@@ -95,12 +95,21 @@ resource "helm_release" "argocd" {
         # RBAC is the authorization layer: Dex above only answers "who is
         # this?"; this decides "what are they allowed to do?". Deny-by-default
         # (policy.default = "") means every GitHub login gets zero access
-        # unless explicitly listed — only sso_github_username gets role:admin.
+        # unless explicitly listed — only sso_admin_email gets role:admin.
+        #
+        # Matched on email, not the GitHub username: Dex's GitHub connector
+        # returns an opaque sub claim (not the readable login) and no groups
+        # claim (no org configured, since this is a personal account), so
+        # email is the only claim ArgoCD's RBAC can reliably match an
+        # individual SSO user against. Confirmed via argocd-server's own
+        # request logs on a real login — matching on the username here
+        # silently granted zero access despite logging in as the right person.
+        #
         # The built-in admin *password* login (separate from GitHub SSO) still
         # bypasses this file entirely, which is why it remains a valid fallback.
         rbac = {
           "policy.default" = ""
-          "policy.csv"     = "g, ${var.sso_github_username}, role:admin"
+          "policy.csv"     = "g, ${var.sso_admin_email}, role:admin"
         }
       }
     })
