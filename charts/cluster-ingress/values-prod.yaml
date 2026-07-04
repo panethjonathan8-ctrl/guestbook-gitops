@@ -1,1 +1,13 @@
 envName: prod
+
+# TODO: replace with the real ACM certificate ARN once `terraform apply` has
+# run on infrastructure/live/account/dns — get it via
+# `terragrunt output certificate_arn` in that directory.
+certificateArn: "arn:aws:acm:eu-west-1:400013494612:certificate/REPLACE_ME"
+
+dnsHostnames:
+  - argocd.guestbookinterview.lol
+
+argocd:
+  enabled: true
+  host: argocd.guestbookinterview.lol

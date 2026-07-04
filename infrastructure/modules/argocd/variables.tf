@@ -79,3 +79,21 @@ variable "eso_secret_name_prefixes" {
   type        = list(string)
   default     = []
 }
+
+variable "enable_sso" {
+  description = "Whether to configure ArgoCD for GitHub SSO (server.insecure + Dex GitHub connector + RBAC allow-list). Prod-only — dev has no public Ingress in front of ArgoCD, so this defaults to false. See issue #53."
+  type        = bool
+  default     = false
+}
+
+variable "sso_hostname" {
+  description = "Public hostname ArgoCD is reachable at, e.g. argocd.guestbookinterview.lol. Used to build the OAuth redirect URL. Only required when enable_sso is true."
+  type        = string
+  default     = null
+}
+
+variable "sso_github_username" {
+  description = "The single GitHub username granted role:admin via RBAC when SSO is enabled. Every other GitHub login authenticates successfully but gets zero access (policy.default is empty). Only required when enable_sso is true."
+  type        = string
+  default     = null
+}

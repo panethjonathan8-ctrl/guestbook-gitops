@@ -1,0 +1,30 @@
+{{- if .Values.argocd.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: argocd-server
+  namespace: {{ .Values.argocd.namespace }}
+  annotations:
+    # This Ingress has no AWS-managed load balancer of its own — the ALB is
+    # owned by the nginx-alb Ingress (ingress.yaml), which forwards every
+    # Host to the NGINX Ingress Controller. NGINX reads this object (class:
+    # nginx) to decide that requests for this specific host get sent to
+    # argocd-server instead of any other backend. Same pattern the guestbook
+    # chart already uses for its own Ingress.
+    {{- with .Values.argocd.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: {{ .Values.argocd.host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Values.argocd.serviceName }}
+                port:
+                  number: {{ .Values.argocd.servicePort }}
+{{- end }}
