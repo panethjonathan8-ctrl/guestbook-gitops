@@ -97,3 +97,9 @@ variable "sso_admin_email" {
   type        = string
   default     = null
 }
+
+variable "sso_admin_sub" {
+  description = "The literal opaque 'sub' claim value Dex's GitHub connector issues for the admin's GitHub account (visible in argocd-server request logs, e.g. 'CgkyNTIxNDgxNzUSBmdpdGh1Yg'). Granted role:admin alongside sso_admin_email (issue #78) as a defense-in-depth binding — see comment in main.tf for why both are bound. Only required when enable_sso is true."
+  type        = string
+  default     = null
+}

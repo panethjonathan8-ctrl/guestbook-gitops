@@ -107,9 +107,19 @@ resource "helm_release" "argocd" {
         #
         # The built-in admin *password* login (separate from GitHub SSO) still
         # bypasses this file entirely, which is why it remains a valid fallback.
+        #
+        # Bound on BOTH email and sub (issue #78): despite the email-only
+        # binding above matching policy on paper (confirmed via
+        # `argocd admin settings rbac can <email> ... --core` returning Yes),
+        # live GitHub SSO sessions still saw zero Applications — every
+        # ApplicationService.List/Watch call returned code=OK but with all
+        # apps filtered out, meaning the live enforcer wasn't actually keying
+        # on the email claim for this session. Binding both means access
+        # doesn't depend on knowing exactly which claim ArgoCD's enforcer
+        # reads at runtime.
         rbac = {
           "policy.default" = ""
-          "policy.csv"     = "g, ${var.sso_admin_email}, role:admin"
+          "policy.csv"     = "g, ${var.sso_admin_email}, role:admin\ng, ${var.sso_admin_sub}, role:admin"
         }
       }
     })

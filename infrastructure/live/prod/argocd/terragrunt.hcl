@@ -26,4 +26,7 @@ inputs = {
   enable_sso      = true
   sso_hostname    = "argocd.guestbookinterview.lol"
   sso_admin_email = "panethjonathan8@gmail.com"
+  # Bound alongside sso_admin_email as a defense-in-depth RBAC binding — see
+  # issue #78 and the comment in modules/argocd/main.tf for why.
+  sso_admin_sub = "CgkyNTIxNDgxNzUSBmdpdGh1Yg"
 }
