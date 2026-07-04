@@ -596,6 +596,17 @@ resource "helm_release" "external_dns" {
       # ownership per-environment.
       txtOwnerId = "guestbook-${var.env_name}"
 
+      # Restricts external-dns to only the ALB-class Ingress (nginx-alb in
+      # charts/cluster-ingress) as a DNS source. Without this, external-dns
+      # also reads every NGINX-class per-app Ingress (guestbook, argocd-server)
+      # — and ingress-nginx reports its own ClusterIP as a placeholder
+      # status.loadBalancer address on those, which isn't externally routable
+      # at all. That produced a real bug: www.guestbookinterview.lol got an
+      # A record pointing at an internal ClusterIP instead of the ALB. Only
+      # the ALB Ingress has a real, externally-routable address, so it's the
+      # only one that should ever be a DNS source.
+      extraArgs = ["--ingress-class=alb"]
+
       serviceAccount = {
         create = true
         name   = "external-dns"
