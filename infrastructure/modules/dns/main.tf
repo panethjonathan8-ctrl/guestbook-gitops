@@ -37,7 +37,10 @@ resource "aws_acm_certificate" "wildcard" {
   }
 
   tags = merge(var.tags, {
-    Name = "*.${var.domain_name}"
+    # AWS tag values reject "*" (see aws_route53_zone.this's Name tag for
+    # comparison, which is a bare domain and doesn't hit this). "wildcard."
+    # conveys the same thing without tripping the tag-value validation regex.
+    Name = "wildcard.${var.domain_name}"
   })
 }
 
