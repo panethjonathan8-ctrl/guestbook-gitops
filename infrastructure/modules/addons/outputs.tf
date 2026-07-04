@@ -22,3 +22,8 @@ output "ebs_csi_role_arn" {
   description = "ARN of the IAM role the EBS CSI driver pod assumes via IRSA. Null when enable_ebs_csi_driver is false."
   value       = try(aws_iam_role.ebs_csi[0].arn, null)
 }
+
+output "external_dns_role_arn" {
+  description = "ARN of the IAM role the external-dns pod assumes via IRSA. Null when enable_external_dns is false."
+  value       = try(aws_iam_role.external_dns[0].arn, null)
+}

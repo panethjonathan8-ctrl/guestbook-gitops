@@ -477,3 +477,132 @@ resource "kubernetes_storage_class_v1" "gp3" {
     type = "gp3"
   }
 }
+
+# ---------------------------------------------------------------------------
+# external-dns — IRSA, Helm release
+# ---------------------------------------------------------------------------
+# Prod-only (enable_external_dns defaults to false). Watches Ingress objects
+# in the cluster and keeps Route 53 in sync with whatever hostname the ALB
+# actually has right now. This is what makes argocd.guestbookinterview.lol
+# survive the ALB being destroyed and recreated with a new DNS name every
+# time the cluster is torn down for cost savings — no hand-maintained record,
+# no custom "watch the ALB" controller.
+
+# IRSA — same pattern as the LBC and EBS CSI roles above. Only the
+# external-dns service account can assume this role.
+resource "aws_iam_role" "external_dns" {
+  count = var.enable_external_dns ? 1 : 0
+
+  name = "guestbook-${var.env_name}-external-dns"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Federated = var.oidc_provider_arn }
+      Action    = "sts:AssumeRoleWithWebIdentity"
+      Condition = {
+        StringEquals = {
+          "${local.oidc_provider_url}:sub" = "system:serviceaccount:${var.external_dns_namespace}:external-dns"
+          "${local.oidc_provider_url}:aud" = "sts.amazonaws.com"
+        }
+      }
+    }]
+  })
+
+  tags = {
+    Project     = "guestbook"
+    Environment = var.env_name
+    ManagedBy   = "terragrunt"
+  }
+}
+
+# ChangeResourceRecordSets is scoped to exactly the one hosted zone ARN we
+# pass in — external-dns cannot write to any other zone in the account, even
+# though the role has valid AWS credentials.
+#
+# ListHostedZones / ListResourceRecordSets / ListTagsForResource use
+# Resource = "*" because the Route 53 API does not support resource-level
+# permissions on those read-only, account-wide list actions — there is no
+# ARN to scope them to. This is the one place in this module where a
+# wildcard resource is unavoidable rather than a shortcut; external-dns's own
+# --domain-filter (set below) is what keeps it from acting on any zone other
+# than ours despite having list visibility into all of them.
+resource "aws_iam_role_policy" "external_dns" {
+  count = var.enable_external_dns ? 1 : 0
+
+  name = "external-dns-policy"
+  role = aws_iam_role.external_dns[0].id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["route53:ChangeResourceRecordSets"]
+        Resource = [var.dns_zone_arn]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "route53:ListHostedZones",
+          "route53:ListResourceRecordSets",
+          "route53:ListTagsForResource",
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "helm_release" "external_dns" {
+  count = var.enable_external_dns ? 1 : 0
+
+  depends_on = [aws_iam_role_policy.external_dns]
+
+  name             = "external-dns"
+  repository       = "https://kubernetes-sigs.github.io/external-dns/"
+  chart            = "external-dns"
+  version          = var.external_dns_chart_version
+  namespace        = var.external_dns_namespace
+  create_namespace = false
+  wait             = true
+  timeout          = 300
+
+  values = [
+    yamlencode({
+      provider = "aws"
+      aws = {
+        region = var.region
+      }
+
+      # Restricts which zones external-dns will act on. IAM's ListHostedZones
+      # already can't be scoped to one zone (see above) — this is the actual
+      # enforcement point that keeps it from touching zones outside this
+      # project even if one existed in the same account.
+      domainFilters = [var.dns_domain_name]
+
+      # sync creates AND deletes records to match current Ingress state. That
+      # matters here specifically because clusters in this project get torn
+      # down and rebuilt to save cost — sync means a removed Ingress (or a
+      # torn-down cluster) cleans up its DNS record automatically instead of
+      # leaving a stale entry pointing at a dead ALB.
+      policy = "sync"
+
+      # TXT registry: external-dns writes a TXT record next to each A record
+      # recording that it, not a human or another tool, owns that record.
+      # Without an owner ID, a second external-dns instance (or a future
+      # dev-cluster one) could fight over the same zone. txtOwnerId scopes
+      # ownership per-environment.
+      txtOwnerId = "guestbook-${var.env_name}"
+
+      serviceAccount = {
+        create = true
+        name   = "external-dns"
+        annotations = {
+          "eks.amazonaws.com/role-arn" = aws_iam_role.external_dns[0].arn
+        }
+      }
+    })
+  ]
+}
