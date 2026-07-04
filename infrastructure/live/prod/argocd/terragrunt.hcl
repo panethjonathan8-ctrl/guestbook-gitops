@@ -21,4 +21,9 @@ inputs = {
   cluster_endpoint  = dependency.eks.outputs.cluster_endpoint
   cluster_ca        = dependency.eks.outputs.cluster_certificate_authority_data
   oidc_provider_arn = dependency.eks.outputs.oidc_provider_arn
+
+  # Prod-only: GitHub SSO via Dex + RBAC allow-list. See issue #53.
+  enable_sso          = true
+  sso_hostname        = "argocd.guestbookinterview.lol"
+  sso_github_username = "panethjonathan8-ctrl"
 }

@@ -11,14 +11,37 @@ metadata:
     # No NodePort hop. LBC auto-manages the SG rule that allows ALB → NGINX pods.
     alb.ingress.kubernetes.io/target-type: ip
 
-    # Listen on HTTP :80 only. Add HTTPS here when a certificate is ready.
+    # HTTP stays open for apps that don't have a real cert-covered hostname
+    # yet. HTTPS is added once a certificateArn is supplied (prod, once the
+    # ACM wildcard cert from infrastructure/modules/dns is issued) — needed
+    # for ArgoCD's GitHub OAuth login, since GitHub requires an HTTPS
+    # callback URL. We don't force an HTTP->HTTPS redirect here: that would
+    # change behaviour for every app behind this shared ALB, not just ArgoCD,
+    # which is out of scope for this change.
+    {{- if .Values.certificateArn }}
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/certificate-arn: {{ .Values.certificateArn | quote }}
+    {{- else }}
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+    {{- end }}
 
     # /healthz is the NGINX liveness endpoint — faster convergence than /.
     alb.ingress.kubernetes.io/healthcheck-path: /healthz
 
     # Tags visible in the AWS console so you can identify which cluster owns this ALB.
     alb.ingress.kubernetes.io/tags: "Project=guestbook,Environment={{ .Values.envName }},ManagedBy=argocd"
+
+    {{- if .Values.dnsHostnames }}
+    # This Ingress has no per-host rules below (it's a catch-all that forwards
+    # every Host to NGINX, which does the real host-based routing via its own
+    # separate Ingress objects — see argocd-ingress.yaml). Because of that,
+    # external-dns has nothing in spec.rules to read a hostname from, even
+    # though this is the one Ingress object that actually gets the ALB's real
+    # address written to its status by AWS LBC. This annotation tells
+    # external-dns "create a record for this hostname, pointed at this
+    # object's load balancer" without needing a matching spec.rules entry.
+    external-dns.alpha.kubernetes.io/hostname: {{ .Values.dnsHostnames | join "," | quote }}
+    {{- end }}
 spec:
   # ingressClassName: alb tells AWS LBC (not NGINX) to reconcile this Ingress.
   ingressClassName: alb

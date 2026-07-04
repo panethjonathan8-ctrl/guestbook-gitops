@@ -9,3 +9,23 @@ nginxServiceName: ingress-nginx-controller
 
 # Port the NGINX controller Service listens on.
 nginxServicePort: 80
+
+# ARN of the ACM certificate the shared ALB should terminate TLS with.
+# Empty string keeps the ALB HTTP-only (dev default). Set in prod once the
+# wildcard cert from infrastructure/modules/dns is issued — see issue #53.
+certificateArn: ""
+
+# Hostnames external-dns should create Route 53 records for, pointed at this
+# ALB. Empty by default. See ingress.yaml for why this lives on the ALB
+# Ingress rather than on each app's own NGINX-class Ingress.
+dnsHostnames: []
+
+# ArgoCD Ingress — disabled by default (dev doesn't get a public ArgoCD URL,
+# see issue #53's prod-only scoping decision).
+argocd:
+  enabled: false
+  namespace: argocd
+  host: ""
+  serviceName: argocd-server
+  servicePort: 80
+  annotations: {}

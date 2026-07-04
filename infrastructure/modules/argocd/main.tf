@@ -45,6 +45,66 @@ resource "helm_release" "argocd" {
   create_namespace = true
   wait             = true
   timeout          = 600
+
+  # server.insecure tells argocd-server to serve plain HTTP instead of its
+  # default self-signed HTTPS. That's safe here specifically because TLS is
+  # already terminated once, upstream, at the ALB (see charts/cluster-ingress)
+  # — everything past that point (ALB->NGINX->argocd-server) stays inside the
+  # cluster's private network. Without this, NGINX would fail to reach
+  # argocd-server at all: it proxies plain HTTP to the backend by default,
+  # and argocd-server's self-signed cert would reject that connection.
+  #
+  # Prod-only (enable_sso defaults to false) — dev keeps ArgoCD's default
+  # settings since it has no Ingress or public hostname pointed at it.
+  values = var.enable_sso ? [
+    yamlencode({
+      configs = {
+        params = {
+          "server.insecure" = true
+        }
+
+        # "url" tells argocd-server its own externally-reachable base URL.
+        # Dex uses this to build the OAuth redirect/callback URL it sends to
+        # GitHub — without it, Dex would guess based on the request it
+        # received, which breaks behind a reverse proxy like our ALB/NGINX.
+        cm = {
+          url = "https://${var.sso_hostname}"
+
+          # Dex is ArgoCD's bundled identity broker — it's what actually
+          # redirects the browser to GitHub and handles the callback. No
+          # "orgs:" filter here: panethjonathan8-ctrl is a personal GitHub
+          # account, not an organisation, so there's no org membership to
+          # check. Anyone with a GitHub account can *authenticate* — RBAC
+          # below is what decides whether that identity gets any real
+          # *access*, which is the deny-by-default gate that matters.
+          "dex.config" = yamlencode({
+            connectors = [
+              {
+                type = "github"
+                id   = "github"
+                name = "GitHub"
+                config = {
+                  clientID     = "$dex.github.clientID"
+                  clientSecret = "$dex.github.clientSecret"
+                }
+              }
+            ]
+          })
+        }
+
+        # RBAC is the authorization layer: Dex above only answers "who is
+        # this?"; this decides "what are they allowed to do?". Deny-by-default
+        # (policy.default = "") means every GitHub login gets zero access
+        # unless explicitly listed — only sso_github_username gets role:admin.
+        # The built-in admin *password* login (separate from GitHub SSO) still
+        # bypasses this file entirely, which is why it remains a valid fallback.
+        rbac = {
+          "policy.default" = ""
+          "policy.csv"     = "g, ${var.sso_github_username}, role:admin"
+        }
+      }
+    })
+  ] : []
 }
 
 # Create the bootstrap Application using the official argocd-apps Helm chart.
@@ -261,6 +321,76 @@ resource "null_resource" "cluster_secret_store" {
                 serviceAccountRef:
                   name: external-secrets
                   namespace: ${var.eso_namespace}
+      YAML
+
+      rm -f /tmp/kubeconfig-${var.cluster_name}
+    EOT
+  }
+}
+
+# ---------------------------------------------------------------------------
+# GitHub OAuth credentials for ArgoCD SSO — synced via ESO
+# ---------------------------------------------------------------------------
+# Prod-only (enable_sso defaults to false).
+#
+# The actual client ID/secret are NOT created here. A GitHub OAuth App has to
+# be created manually (github.com -> Settings -> Developer settings -> OAuth
+# Apps) and its credentials stored in Secrets Manager by hand, at the path
+# below, as JSON: {"client_id": "...", "client_secret": "..."}. Terraform
+# never generates or holds the actual secret value — only the *reference* to
+# where ESO should find it. This is the same "Terraform never touches secret
+# values" rule as every other ExternalSecret in this project.
+locals {
+  github_oauth_secret_name = "guestbook/${var.env_name}/argocd-github-oauth"
+}
+
+# ArgoCD's Dex config (wired up in the values block above) reads these
+# credentials via $dex.github.clientID / $dex.github.clientSecret — a
+# placeholder syntax argocd-server resolves by looking up matching keys in
+# the argocd-secret Kubernetes Secret. That Secret already exists (the
+# argo-cd Helm chart creates and owns it), so this ExternalSecret uses
+# creationPolicy: Merge to add just these two keys into it, rather than
+# creating a competing Secret object that Dex would never actually read.
+resource "null_resource" "argocd_github_oauth_secret" {
+  count = var.enable_sso ? 1 : 0
+
+  depends_on = [null_resource.cluster_secret_store, helm_release.argocd]
+
+  triggers = {
+    cluster_name = var.cluster_name
+    region       = var.region
+    secret_name  = local.github_oauth_secret_name
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      aws eks update-kubeconfig \
+        --name ${var.cluster_name} \
+        --region ${var.region} \
+        --kubeconfig /tmp/kubeconfig-${var.cluster_name}
+
+      KUBECONFIG=/tmp/kubeconfig-${var.cluster_name} kubectl apply -f - <<'YAML'
+      apiVersion: external-secrets.io/v1beta1
+      kind: ExternalSecret
+      metadata:
+        name: argocd-github-oauth
+        namespace: ${var.argocd_namespace}
+      spec:
+        secretStoreRef:
+          name: aws-secrets-manager
+          kind: ClusterSecretStore
+        target:
+          name: argocd-secret
+          creationPolicy: Merge
+        data:
+          - secretKey: dex.github.clientID
+            remoteRef:
+              key: ${local.github_oauth_secret_name}
+              property: client_id
+          - secretKey: dex.github.clientSecret
+            remoteRef:
+              key: ${local.github_oauth_secret_name}
+              property: client_secret
       YAML
 
       rm -f /tmp/kubeconfig-${var.cluster_name}

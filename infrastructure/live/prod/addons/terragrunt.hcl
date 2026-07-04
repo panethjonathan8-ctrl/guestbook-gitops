@@ -27,6 +27,15 @@ dependency "vpc" {
   mock_outputs_allowed_terraform_commands = ["validate", "plan"]
 }
 
+dependency "dns" {
+  config_path = "../../account/dns"
+
+  mock_outputs = {
+    zone_arn = "arn:aws:route53:::hostedzone/MOCKZONEID"
+  }
+  mock_outputs_allowed_terraform_commands = ["validate", "plan"]
+}
+
 inputs = {
   cluster_endpoint   = dependency.eks.outputs.cluster_endpoint
   cluster_ca         = dependency.eks.outputs.cluster_certificate_authority_data
@@ -38,4 +47,11 @@ inputs = {
   # Prod-only: gives Prometheus and Loki real EBS-backed PVCs instead of
   # emptyDir. See issue #65.
   enable_ebs_csi_driver = true
+
+  # Prod-only: keeps Route 53 in sync with the ALB's current DNS name so
+  # argocd.guestbookinterview.lol survives a cluster teardown/rebuild. See
+  # issue #53.
+  enable_external_dns = true
+  dns_domain_name     = "guestbookinterview.lol"
+  dns_zone_arn        = dependency.dns.outputs.zone_arn
 }

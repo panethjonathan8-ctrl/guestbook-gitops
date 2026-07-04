@@ -73,3 +73,33 @@ variable "kubernetes_version" {
   type        = string
   default     = null
 }
+
+variable "enable_external_dns" {
+  description = "Whether to install external-dns and its IRSA role. Prod-only — dev has no stable domain to manage, so this defaults to false."
+  type        = bool
+  default     = false
+}
+
+variable "dns_domain_name" {
+  description = "Root domain external-dns is allowed to manage records under, e.g. guestbookinterview.lol. Only required when enable_external_dns is true."
+  type        = string
+  default     = null
+}
+
+variable "dns_zone_arn" {
+  description = "ARN of the Route 53 hosted zone external-dns is scoped to. Only required when enable_external_dns is true."
+  type        = string
+  default     = null
+}
+
+variable "external_dns_chart_version" {
+  description = "Version of the external-dns Helm chart."
+  type        = string
+  default     = "1.15.0"
+}
+
+variable "external_dns_namespace" {
+  description = "Kubernetes namespace external-dns will be installed into."
+  type        = string
+  default     = "kube-system"
+}
