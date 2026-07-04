@@ -18,7 +18,7 @@ env:
   ENV_COLOR: "#F44336"   # red
 
 ingress:
-  host: guestbook.example.com
+  host: www.guestbookinterview.lol
 
 # Tighter resource limits reflect production discipline.
 # Requests are higher to guarantee the pod gets what it needs.
