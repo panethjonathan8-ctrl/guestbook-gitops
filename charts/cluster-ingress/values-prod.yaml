@@ -5,7 +5,12 @@ certificateArn: "arn:aws:acm:eu-west-1:400013494612:certificate/3749608f-9cc1-42
 dnsHostnames:
   - argocd.guestbookinterview.lol
   - www.guestbookinterview.lol
+  - grafana.guestbookinterview.lol
 
 argocd:
   enabled: true
   host: argocd.guestbookinterview.lol
+
+grafana:
+  enabled: true
+  host: grafana.guestbookinterview.lol

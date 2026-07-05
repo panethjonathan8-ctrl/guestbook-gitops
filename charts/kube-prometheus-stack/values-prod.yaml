@@ -6,6 +6,22 @@
 # pod restart instead of starting empty every time.
 #
 # TODO: replace adminPassword with an existingSecret backed by ESO + Secrets Manager.
+#
+# GitHub SSO (issue #54): separate GitHub OAuth App from ArgoCD's, for
+# blast-radius isolation — a leaked Grafana secret can't be used against
+# ArgoCD. Client ID/secret live in Secrets Manager, synced by the
+# ExternalSecret in templates/grafana-github-oauth-externalsecret.yaml.
+#
+# allowed_users is a GitHub username allow-list. This account has no GitHub
+# org (personal account), so the org-based restriction the issue originally
+# proposed isn't possible — same limitation hit with ArgoCD's Dex/GitHub
+# connector. Unlike ArgoCD though, Grafana talks to GitHub's API directly
+# (no Dex in between), so it can match your real GitHub login with no
+# opaque-subject ambiguity to work around.
+githubSSO:
+  enabled: true
+  secretsManagerKey: "guestbook/prod/grafana-github-oauth"
+
 kube-prometheus-stack:
   prometheus:
     prometheusSpec:
@@ -17,3 +33,25 @@ kube-prometheus-stack:
             resources:
               requests:
                 storage: 20Gi
+
+  grafana:
+    # Injects GF_AUTH_GITHUB_CLIENT_ID / GF_AUTH_GITHUB_CLIENT_SECRET as env
+    # vars from the ExternalSecret above. Grafana maps GF_<SECTION>_<KEY>
+    # env vars onto the matching grafana.ini setting automatically — no
+    # placeholder-substitution syntax needed (contrast with ArgoCD/Dex,
+    # which reads its config from a ConfigMap and needs the $<secret-key>
+    # trick instead).
+    envFromSecret: grafana-github-oauth
+
+    "grafana.ini":
+      server:
+        root_url: https://grafana.guestbookinterview.lol
+      auth.github:
+        enabled: true
+        allow_sign_up: true
+        scopes: user:email,read:org
+        auth_url: https://github.com/login/oauth/authorize
+        token_url: https://github.com/login/oauth/access_token
+        api_url: https://api.github.com/user
+        allowed_users: panethjonathan8-ctrl
+        role_attribute_path: "'Viewer'"

@@ -1,4 +1,13 @@
-# All values are nested under "kube-prometheus-stack:" because that is the
+# GitHub SSO for Grafana — prod-only (see issue #54, same prod-only scoping
+# pattern as ArgoCD SSO in issue #53). Dev doesn't get a public Grafana URL.
+# This is a top-level key (not nested under "kube-prometheus-stack:") because
+# it controls this wrapper chart's own template
+# (templates/grafana-github-oauth-externalsecret.yaml), not the subchart.
+githubSSO:
+  enabled: false
+  secretsManagerKey: ""
+
+# All values below are nested under "kube-prometheus-stack:" because that is the
 # dependency name in Chart.yaml. Helm routes values to the subchart by matching
 # the key name to the dependency name.
 kube-prometheus-stack:

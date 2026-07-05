@@ -29,3 +29,13 @@ argocd:
   serviceName: argocd-server
   servicePort: 80
   annotations: {}
+
+# Grafana Ingress — disabled by default (dev doesn't get a public Grafana
+# URL, same prod-only scoping decision as ArgoCD above). See issue #54.
+grafana:
+  enabled: false
+  namespace: monitoring
+  host: ""
+  serviceName: kube-prometheus-stack-grafana
+  servicePort: 80
+  annotations: {}
