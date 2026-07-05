@@ -1,0 +1,28 @@
+name: release-please
+
+# Runs on every push to main (i.e. every squash-merge). release-please reads
+# the Conventional Commit messages since the last release tag and opens/
+# updates a single "chore: release X.Y.Z" PR with the computed version bump
+# and changelog. Merging that PR is what actually creates the git tag and
+# GitHub Release — this workflow never tags anything by itself.
+on:
+  push:
+    branches:
+      - main
+
+# contents: write  -> push the release branch / create the tag
+# pull-requests: write -> open/update the Release PR
+# Scoped to this workflow only; the repo-wide default token permission
+# stays "read" for every other workflow.
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
