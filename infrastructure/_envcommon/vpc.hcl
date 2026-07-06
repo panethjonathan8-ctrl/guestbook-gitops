@@ -11,7 +11,7 @@ locals {
 }
 
 terraform {
-  source = "tfr:///terraform-aws-modules/vpc/aws?version=5.13.0"
+  source = "${dirname(find_in_parent_folders("root.hcl"))}/modules/vpc"
 }
 
 inputs = {
