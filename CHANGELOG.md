@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/panethjonathan8-ctrl/guestbook-gitops/compare/v1.0.0...v1.0.1) (2026-07-06)
+
+
+### Infrastructure
+
+* wrap EKS and VPC registry modules under modules/ ([#85](https://github.com/panethjonathan8-ctrl/guestbook-gitops/issues/85)) ([42f636b](https://github.com/panethjonathan8-ctrl/guestbook-gitops/commit/42f636bbbe60565175b119855564e7010bc7f9f6)), closes [#84](https://github.com/panethjonathan8-ctrl/guestbook-gitops/issues/84)
+
 ## 1.0.0 (2026-07-05)
 
 
