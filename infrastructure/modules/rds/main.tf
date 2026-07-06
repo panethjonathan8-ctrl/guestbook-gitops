@@ -1,18 +1,3 @@
-terraform {
-  required_version = ">= 1.6.0"
-
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 6.0"
-    }
-    random = {
-      source  = "hashicorp/random"
-      version = "~> 3.0"
-    }
-  }
-}
-
 # No special characters — @, /, ? and # all break URL parsing when embedded
 # in postgresql://user:pass@host/db. A purely alphanumeric password is safe
 # in every context and still has 62^32 possible values.
@@ -104,7 +89,7 @@ resource "aws_db_instance" "db" {
   # skip_final_snapshot = true for dev: fast teardown, no orphaned snapshots.
   # skip_final_snapshot = false for prod: AWS creates a snapshot before destroy
   # so data can be recovered even after a terraform destroy.
-  skip_final_snapshot = var.skip_final_snapshot
+  skip_final_snapshot       = var.skip_final_snapshot
   final_snapshot_identifier = var.skip_final_snapshot ? null : "guestbook-${var.env_name}-final"
 
   # Prevent accidental deletion via the AWS console or API.

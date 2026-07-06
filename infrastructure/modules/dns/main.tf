@@ -1,14 +1,3 @@
-terraform {
-  required_version = ">= 1.6.0"
-
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 6.0"
-    }
-  }
-}
-
 # The hosted zone is AWS's authoritative DNS server for this domain.
 # Creating it does NOT make it live on the internet by itself — the domain
 # registrar (GoDaddy) still points at its own nameservers until we copy the

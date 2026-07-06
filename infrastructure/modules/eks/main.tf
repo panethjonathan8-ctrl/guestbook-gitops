@@ -1,14 +1,3 @@
-terraform {
-  required_version = ">= 1.6.0"
-
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 6.0"
-    }
-  }
-}
-
 # Thin wrapper around the community EKS module so every building block this
 # system is made of — whether we wrote it or not — is discoverable under
 # infrastructure/modules/, same as addons/argocd/rds/dns/github-oidc.
