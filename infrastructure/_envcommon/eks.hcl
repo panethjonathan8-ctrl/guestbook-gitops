@@ -10,7 +10,7 @@ locals {
 }
 
 terraform {
-  source = "tfr:///terraform-aws-modules/eks/aws?version=21.24.0"
+  source = "${dirname(find_in_parent_folders("root.hcl"))}/modules/eks"
 }
 
 inputs = {
@@ -27,8 +27,16 @@ inputs = {
   enable_cluster_creator_admin_permissions = false
 
   # No CloudWatch logging — not needed for this project.
+  #
+  # NOTE (issue #84): this used to be named cluster_enabled_log_types, which
+  # is not a real input on terraform-aws-modules/eks/aws — Terragrunt passes
+  # `inputs` as TF_VAR_* env vars, and an unmatched TF_VAR_* is silently
+  # ignored rather than erroring. That meant this line did nothing, and the
+  # module's own default (["audit","api","authenticator"]) was silently in
+  # effect the whole time, with EKS auto-creating an unmanaged CloudWatch Log
+  # Group to receive them. The corrected name below actually disables it.
   create_cloudwatch_log_group = false
-  cluster_enabled_log_types   = []
+  enabled_log_types           = []
 
   # No KMS key — dev cluster does not need secrets encryption.
   create_kms_key     = false
