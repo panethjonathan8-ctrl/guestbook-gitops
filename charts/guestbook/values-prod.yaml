@@ -11,7 +11,7 @@ pdb:
 
 image:
   repository: "400013494612.dkr.ecr.eu-west-1.amazonaws.com/guestbook"
-  tag: "966e0fa"
+  tag: "1.2.0"
 
 env:
   ENV_NAME: production
