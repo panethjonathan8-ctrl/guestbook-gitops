@@ -36,4 +36,13 @@ inputs = {
   sso_hostname    = "argocddev.guestbookinterview.lol"
   sso_admin_email = "panethjonathan8@gmail.com"
   sso_admin_sub   = "CgkyNTIxNDgxNzUSBmdpdGh1Yg"
+
+  # Dev-only, deliberately not mirrored to prod yet: upgrades ArgoCD from
+  # v2.14.11 to v3.4.4 (a major version) to fix a schema-comparison bug
+  # where kube-prometheus-stack's Application couldn't sync at all — EKS
+  # 1.36 includes a status field (.status.terminatingReplicas) that
+  # predates chart 7.9.0's bundled client-go. Every chart version newer
+  # than 7.9.0 jumps straight to ArgoCD 3.x; there is no smaller fix
+  # available. See issue #103.
+  argocd_chart_version = "10.1.2"
 }
