@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.0](https://github.com/panethjonathan8-ctrl/guestbook-gitops/compare/v1.1.0...v1.2.0) (2026-07-07)
+
+
+### Features
+
+* ArgoCD and Grafana SSO for dev cluster ([#96](https://github.com/panethjonathan8-ctrl/guestbook-gitops/issues/96)) ([591287d](https://github.com/panethjonathan8-ctrl/guestbook-gitops/commit/591287d74b62e2ee418d312c2ee69a4f7b850ba0)), closes [#95](https://github.com/panethjonathan8-ctrl/guestbook-gitops/issues/95)
+* auto-merge release-please's Release PR, matching guestbook-app ([#99](https://github.com/panethjonathan8-ctrl/guestbook-gitops/issues/99)) ([b8c9acd](https://github.com/panethjonathan8-ctrl/guestbook-gitops/commit/b8c9acd1222af201821c479e739a6c57da4909e5)), closes [#98](https://github.com/panethjonathan8-ctrl/guestbook-gitops/issues/98)
+
 ## [1.1.0](https://github.com/panethjonathan8-ctrl/guestbook-gitops/compare/v1.0.1...v1.1.0) (2026-07-07)
 
 
