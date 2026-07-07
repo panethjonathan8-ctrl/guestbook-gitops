@@ -32,9 +32,13 @@ inputs = {
 
   # Production sizing: 7-day backup window, deletion protection on,
   # final snapshot taken before any destroy so data is never lost.
-  # To destroy prod RDS you must first run:
-  #   terraform apply -var deletion_protection=false
-  # then terraform destroy — this is intentional friction.
+  # To destroy prod RDS you must first flip deletion_protection to false
+  # here and apply that change, then destroy — this is intentional friction.
+  #
+  # Also note: as of this writing, the guestbook-dev IAM user does not have
+  # rds:CreateDBSnapshot, which the final-snapshot-on-delete behavior below
+  # requires. Either grant that permission first, or temporarily flip
+  # skip_final_snapshot to true too if the data isn't worth protecting.
   instance_class          = "db.t3.micro"
   skip_final_snapshot     = false
   deletion_protection     = true
