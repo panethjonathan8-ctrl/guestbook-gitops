@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.2](https://github.com/panethjonathan8-ctrl/guestbook-gitops/compare/v1.2.1...v1.2.2) (2026-07-07)
+
+
+### Infrastructure
+
+* upgrade dev ArgoCD to v3.4.4 to fix sync ComparisonError ([#104](https://github.com/panethjonathan8-ctrl/guestbook-gitops/issues/104)) ([9788e75](https://github.com/panethjonathan8-ctrl/guestbook-gitops/commit/9788e754f18befc014c7b9ecc6e392db03e8839e)), closes [#103](https://github.com/panethjonathan8-ctrl/guestbook-gitops/issues/103)
+
 ## [1.2.1](https://github.com/panethjonathan8-ctrl/guestbook-gitops/compare/v1.2.0...v1.2.1) (2026-07-07)
 
 
