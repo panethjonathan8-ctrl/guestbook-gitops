@@ -19,7 +19,7 @@ kube-prometheus-stack:
 
     "grafana.ini":
       server:
-        root_url: https://grafana.dev.guestbookinterview.lol
+        root_url: https://grafanadev.guestbookinterview.lol
       auth.github:
         enabled: true
         allow_sign_up: true
