@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.2](https://github.com/panethjonathan8-ctrl/guestbook-gitops/compare/v1.0.1...v1.0.2) (2026-07-07)
+
+
+### Infrastructure
+
+* split provider/terraform blocks into providers.tf per module ([#88](https://github.com/panethjonathan8-ctrl/guestbook-gitops/issues/88)) ([25078ad](https://github.com/panethjonathan8-ctrl/guestbook-gitops/commit/25078adac4876d3be4e4b4391ed0c43642ad05f0)), closes [#87](https://github.com/panethjonathan8-ctrl/guestbook-gitops/issues/87)
+
 ## [1.0.1](https://github.com/panethjonathan8-ctrl/guestbook-gitops/compare/v1.0.0...v1.0.1) (2026-07-06)
 
 
