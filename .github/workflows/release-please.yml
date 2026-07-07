@@ -22,7 +22,24 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
+      # Uses GH_RELEASE_PAT, not the default GITHUB_TOKEN — GitHub's
+      # anti-recursion protection blocks further workflow runs from being
+      # triggered by anything performed via GITHUB_TOKEN, which includes
+      # PRs it opens. Without this, the Release PR never gets CI run
+      # against it, so its required checks could never pass and auto-merge
+      # below would wait forever.
       - uses: googleapis/release-please-action@v4
         with:
+          token: ${{ secrets.GH_RELEASE_PAT }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+
+      # Schedules auto-merge on the Release PR once its required checks
+      # pass — doesn't bypass them. `|| true` covers the normal case where
+      # no Release PR is currently open (e.g. this push is itself a
+      # release being cut), so this step doesn't fail every regular push.
+      - name: Auto-merge the Release PR
+        run: gh pr merge --auto --squash release-please--branches--main || true
+        env:
+          GH_TOKEN: ${{ secrets.GH_RELEASE_PAT }}
+          GH_REPO: ${{ github.repository }}
