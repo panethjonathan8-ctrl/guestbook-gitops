@@ -26,4 +26,14 @@ inputs = {
   # ESO on this cluster must be allowed to read secrets for both environments.
   # Without this, staging's ExternalSecret would get AccessDenied from Secrets Manager.
   eso_secret_name_prefixes = ["guestbook/dev", "guestbook/staging"]
+
+  # GitHub SSO via Dex + RBAC allow-list, mirroring prod (issue #53/#78).
+  # See issue #95. sso_admin_sub is the same value prod uses — it's derived
+  # from the Dex connector id ("github") and this GitHub account's numeric
+  # user id, not from which OAuth App was used to authenticate, so it does
+  # not change between environments.
+  enable_sso      = true
+  sso_hostname    = "argocd.dev.guestbookinterview.lol"
+  sso_admin_email = "panethjonathan8@gmail.com"
+  sso_admin_sub   = "CgkyNTIxNDgxNzUSBmdpdGh1Yg"
 }

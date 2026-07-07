@@ -1,8 +1,31 @@
 # Dev-specific overrides for kube-prometheus-stack.
 # The base values.yaml already configures emptyDir storage which is correct for dev.
-# No additional overrides needed at this stage.
 #
 # Future dev-only overrides to add here:
 #   - Shorter scrape intervals for faster feedback during development
 #   - Reduced retention (e.g. 2d) if disk pressure becomes a concern
-kube-prometheus-stack: {}
+
+# GitHub SSO (issue #95), mirroring prod's pattern (issue #54): a separate
+# GitHub OAuth App from ArgoCD's, for blast-radius isolation. Client ID/secret
+# live in Secrets Manager, synced by the ExternalSecret in
+# templates/grafana-github-oauth-externalsecret.yaml.
+githubSSO:
+  enabled: true
+  secretsManagerKey: "guestbook/dev/grafana-github-oauth"
+
+kube-prometheus-stack:
+  grafana:
+    envFromSecret: grafana-github-oauth
+
+    "grafana.ini":
+      server:
+        root_url: https://grafana.dev.guestbookinterview.lol
+      auth.github:
+        enabled: true
+        allow_sign_up: true
+        scopes: user:email,read:org
+        auth_url: https://github.com/login/oauth/authorize
+        token_url: https://github.com/login/oauth/access_token
+        api_url: https://api.github.com/user
+        allowed_users: panethjonathan8-ctrl
+        role_attribute_path: "'Viewer'"
