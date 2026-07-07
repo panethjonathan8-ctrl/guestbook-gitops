@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/panethjonathan8-ctrl/guestbook-gitops/compare/v1.2.0...v1.2.1) (2026-07-07)
+
+
+### Bug Fixes
+
+* rename argocd/grafana dev hostnames to single-level, wildcard-cert-covered subdomains ([#101](https://github.com/panethjonathan8-ctrl/guestbook-gitops/issues/101)) ([ebd9999](https://github.com/panethjonathan8-ctrl/guestbook-gitops/commit/ebd9999dd01941892014dc3cc365c391174b2255)), closes [#100](https://github.com/panethjonathan8-ctrl/guestbook-gitops/issues/100)
+
 ## [1.2.0](https://github.com/panethjonathan8-ctrl/guestbook-gitops/compare/v1.1.0...v1.2.0) (2026-07-07)
 
 
