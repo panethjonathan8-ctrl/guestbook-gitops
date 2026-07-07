@@ -1,1 +1,8 @@
 envName: dev
+
+# Same wildcard cert prod uses (*.guestbookinterview.lol covers these too).
+certificateArn: "arn:aws:acm:eu-west-1:400013494612:certificate/3749608f-9cc1-425b-89f9-54eb6c68f4b1"
+
+dnsHostnames:
+  - dev.guestbookinterview.lol
+  - staging.guestbookinterview.lol

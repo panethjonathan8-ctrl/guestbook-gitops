@@ -11,7 +11,7 @@ env:
   ENV_COLOR: "#4CAF50"   # green
 
 ingress:
-  host: dev.guestbook.example.com
+  host: dev.guestbookinterview.lol
 
 resources:
   requests:
