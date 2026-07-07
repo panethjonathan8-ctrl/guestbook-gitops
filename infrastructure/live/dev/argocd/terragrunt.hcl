@@ -37,12 +37,16 @@ inputs = {
   sso_admin_email = "panethjonathan8@gmail.com"
   sso_admin_sub   = "CgkyNTIxNDgxNzUSBmdpdGh1Yg"
 
-  # Dev-only, deliberately not mirrored to prod yet: upgrades ArgoCD from
-  # v2.14.11 to v3.4.4 (a major version) to fix a schema-comparison bug
-  # where kube-prometheus-stack's Application couldn't sync at all — EKS
-  # 1.36 includes a status field (.status.terminatingReplicas) that
-  # predates chart 7.9.0's bundled client-go. Every chart version newer
-  # than 7.9.0 jumps straight to ArgoCD 3.x; there is no smaller fix
-  # available. See issue #103.
-  argocd_chart_version = "10.1.2"
+  # NOTE: we tried upgrading to argocd_chart_version = "10.1.2" (ArgoCD
+  # v3.4.4) in #103/#104 to fix kube-prometheus-stack's ComparisonError
+  # (EKS 1.36 has a status field, .status.terminatingReplicas, that predates
+  # chart 7.9.0's bundled client-go). The upgrade DID fix that, but broke
+  # something worse: no Applications were visible to any SSO-logged-in user
+  # afterward, even though the Application objects, RBAC policy (verified
+  # via `argocd admin settings rbac can`), and session claims were all
+  # confirmed correct. The disconnect is somewhere in how ArgoCD 3.4.4's
+  # live gRPC request path resolves claims into an enforcement decision —
+  # a deeper bug than was safe to chase under time pressure. Reverted in
+  # #106. kube-prometheus-stack's Unknown sync status is an accepted,
+  # documented, cosmetic quirk again until this gets revisited.
 }
