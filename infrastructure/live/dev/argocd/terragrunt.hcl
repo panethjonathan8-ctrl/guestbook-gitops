@@ -33,7 +33,7 @@ inputs = {
   # user id, not from which OAuth App was used to authenticate, so it does
   # not change between environments.
   enable_sso      = true
-  sso_hostname    = "argocd.dev.guestbookinterview.lol"
+  sso_hostname    = "argocddev.guestbookinterview.lol"
   sso_admin_email = "panethjonathan8@gmail.com"
   sso_admin_sub   = "CgkyNTIxNDgxNzUSBmdpdGh1Yg"
 }
