@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.3](https://github.com/panethjonathan8-ctrl/guestbook-gitops/compare/v1.2.2...v1.2.3) (2026-07-08)
+
+
+### Bug Fixes
+
+* enforce HTTP to HTTPS redirect on the shared ALB ([#109](https://github.com/panethjonathan8-ctrl/guestbook-gitops/issues/109)) ([219325f](https://github.com/panethjonathan8-ctrl/guestbook-gitops/commit/219325f054c9e73f2c8a5768804ea651e3712b3c))
+
 ## [1.2.2](https://github.com/panethjonathan8-ctrl/guestbook-gitops/compare/v1.2.1...v1.2.2) (2026-07-07)
 
 
