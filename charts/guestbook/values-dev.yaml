@@ -4,7 +4,7 @@ image:
   # ECR URL set after Terragrunt provisions the repository.
   # CI updates this tag on every successful build.
   repository: "400013494612.dkr.ecr.eu-west-1.amazonaws.com/guestbook"
-  tag: "0d914fc"
+  tag: "4f0b303"
 
 env:
   ENV_NAME: dev
